@@ -4,7 +4,7 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
 <meta name="theme-color" content="#1a1a1a" />
-<title>Family Time</title>
+<title>Family Schedule</title>
 <style>
   :root {
     --bg: #faf8f5;
@@ -873,7 +873,7 @@
 <body>
   <div class="app">
     <header>
-      <h1>Family Time</h1>
+      <h1>Family Schedule</h1>
       <button class="menu-btn" id="menu-btn" aria-label="Menu">⋯</button>
     </header>
 
@@ -922,14 +922,14 @@
       </div>
 
       <div class="legend" id="legend">
-        <div class="legend-item"><div class="legend-corner"></div>With kid</div>
+        <div class="legend-item"><div class="legend-corner"></div>My day</div>
         <div class="legend-item"><div class="legend-dot-event"></div>My event</div>
         <div class="legend-item"><div class="legend-dot-sub"></div>Subscribed</div>
         <div class="legend-item"><div class="legend-dot-bday"></div>Birthday</div>
         <div class="legend-item"><div class="legend-today"></div>Today</div>
       </div>
 
-      <p class="footer-hint" id="footer-hint">Tap to toggle "with kid" • Long-press for events</p>
+      <p class="footer-hint" id="footer-hint">Tap for events • Long-press to toggle "my day"</p>
     </div>
 
     <!-- Events panel -->
@@ -947,7 +947,7 @@
 
       <div class="events-day-body" id="events-day-body">
         <div class="events-list" id="events-list"></div>
-        <button class="toggle-kid-btn" id="toggle-kid-btn" style="display:none;">With kid</button>
+        <button class="toggle-kid-btn" id="toggle-kid-btn" style="display:none;">My day</button>
         <button class="add-event-btn" id="add-event-btn" style="display:none;">+ Add event</button>
       </div>
 
@@ -965,6 +965,10 @@
     <div class="modal">
       <div class="modal-handle"></div>
       <div class="modal-title">Menu</div>
+      <button class="menu-action" id="bdays-btn">
+        Birthdays
+        <span class="menu-action-sub" id="bdays-status">Manage recurring birthdays</span>
+      </button>
       <button class="menu-action" id="settings-btn">
         Sync settings
         <span class="menu-action-sub" id="settings-status">Configure GitHub sync</span>
@@ -972,10 +976,6 @@
       <button class="menu-action" id="subs-btn">
         Subscribed calendars
         <span class="menu-action-sub" id="subs-status">Manage iCal subscriptions</span>
-      </button>
-      <button class="menu-action" id="bdays-btn">
-        Birthdays
-        <span class="menu-action-sub" id="bdays-status">Manage recurring birthdays</span>
       </button>
       <button class="menu-action" id="export-btn">
         Export local backup
@@ -1460,7 +1460,7 @@
     const { user, repo, file, token } = syncSettings;
     const url = `https://api.github.com/repos/${user}/${repo}/contents/${file}`;
     const body = {
-      message: `Update from Family Time app — ${new Date().toISOString()}`,
+      message: `Update from Family Schedule app — ${new Date().toISOString()}`,
       content: b64encode(JSON.stringify(data, null, 2))
     };
     if (sha) body.sha = sha;
@@ -1591,7 +1591,7 @@
       navWrap.style.display = 'flex';
       legend.style.display = 'flex';
       hint.style.display = 'block';
-      hint.textContent = 'Tap for events • Long-press to toggle "with kid"';
+      hint.textContent = 'Tap for events • Long-press to toggle "my day"';
       renderMonth();
     } else if (currentView === 'year') {
       navWrap.style.display = 'flex';
@@ -1916,7 +1916,7 @@
     const thisYear = today.getFullYear();
     const todayKey = dateToKey(today);
 
-    // Month stat follows viewDate
+    // Month stat follows viewDate (full month, planned + actual)
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
     const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-`;
@@ -1927,20 +1927,38 @@
     const daysInViewMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
     const monthPct = Math.round((monthCount / daysInViewMonth) * 100);
 
-    // Year stat stays pinned to current year, only counts marked days <= today
-    const yearPrefix = `${thisYear}-`;
-    let yearCountToDate = 0;
-    for (const key in familyData.days) {
-      if (familyData.days[key] && key.startsWith(yearPrefix) && key <= todayKey) yearCountToDate++;
+    // Year stat follows viewDate
+    const yearPrefix = `${viewYear}-`;
+    let yearCount = 0;
+    if (viewYear === thisYear) {
+      // Current year: only count days <= today
+      for (const key in familyData.days) {
+        if (familyData.days[key] && key.startsWith(yearPrefix) && key <= todayKey) yearCount++;
+      }
+    } else {
+      // Past or future year: count all marked days in that year
+      for (const key in familyData.days) {
+        if (familyData.days[key] && key.startsWith(yearPrefix)) yearCount++;
+      }
     }
-    const startOfYear = new Date(thisYear, 0, 1);
-    const daysElapsed = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
-    const yearPct = daysElapsed > 0 ? Math.round((yearCountToDate / daysElapsed) * 100) : 0;
+
+    const isLeapYear = ((viewYear % 4 === 0 && viewYear % 100 !== 0) || viewYear % 400 === 0);
+    const fullYearLength = isLeapYear ? 366 : 365;
+
+    let yearDenom;
+    if (viewYear === thisYear) {
+      // Days elapsed in current year
+      const startOfYear = new Date(thisYear, 0, 1);
+      yearDenom = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+    } else {
+      yearDenom = fullYearLength;
+    }
+    const yearPct = yearDenom > 0 ? Math.round((yearCount / yearDenom) * 100) : 0;
 
     const el = document.getElementById('stats-compact');
     el.innerHTML = `
       <span class="stat-piece">${MONTHS_SHORT[viewMonth]} ${viewYear}: <span class="stat-num">${monthCount}</span>/${daysInViewMonth} - <span class="stat-pct">${monthPct}%</span></span>
-      <span class="stat-piece">${thisYear}: <span class="stat-num">${yearCountToDate}</span>/${daysElapsed} - <span class="stat-pct">${yearPct}%</span></span>
+      <span class="stat-piece">${viewYear}: <span class="stat-num">${yearCount}</span>/${yearDenom} - <span class="stat-pct">${yearPct}%</span></span>
     `;
   }
 
@@ -1983,7 +2001,7 @@
     addBtn.style.display = 'block';
     toggleKidBtn.style.display = 'block';
     const isWithKid = !!familyData.days[selectedDateKey];
-    toggleKidBtn.textContent = isWithKid ? '✓ With kid' : 'Mark as with kid';
+    toggleKidBtn.textContent = isWithKid ? '✓ My day' : 'Mark as my day';
     toggleKidBtn.classList.toggle('active', isWithKid);
 
     const date = parseDateKey(selectedDateKey);
