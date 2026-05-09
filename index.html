@@ -1,0 +1,2747 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+<meta name="theme-color" content="#1a1a1a" />
+<title>Family Time</title>
+<style>
+  :root {
+    --bg: #faf8f5;
+    --surface: #ffffff;
+    --ink: #1a1a1a;
+    --ink-soft: #6b6862;
+    --line: #e8e4dd;
+    --accent: #2d5d4f;
+    --accent-soft: #d4e3dc;
+    --warn: #b8860b;
+    --warn-soft: #f5e9c8;
+    --danger: #a04040;
+    --danger-soft: #f0d4d4;
+    --event-dot: #c47a3d;
+    --sub-dot: #8a9a9e;
+    --bday-dot: #7a5b8c;
+    --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; -webkit-tap-highlight-color: transparent; }
+
+  html, body {
+    background: var(--bg);
+    color: var(--ink);
+    font-family: 'Iowan Old Style', 'Palatino Linotype', Palatino, Georgia, serif;
+    min-height: 100vh;
+    overscroll-behavior: none;
+  }
+
+  .app { max-width: 480px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  header {
+    margin-bottom: 20px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--line);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+  }
+
+  h1 {
+    font-size: 13px;
+    font-weight: 500;
+    letter-spacing: 0.18em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+  }
+
+  .menu-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 16px;
+  }
+
+  .sync-status {
+    width: 100%;
+    background: var(--accent-soft);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    border-radius: 10px;
+    padding: 10px 14px;
+    margin-bottom: 16px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 12px;
+    letter-spacing: 0.04em;
+  }
+
+  .sync-status:active { transform: scale(0.99); }
+  .sync-status.warn { background: var(--warn-soft); border-color: var(--warn); color: var(--warn); }
+  .sync-status.danger { background: var(--danger-soft); border-color: var(--danger); color: var(--danger); }
+  .sync-status.muted { background: var(--surface); border-color: var(--line); color: var(--ink-soft); }
+  .sync-status .arrow { font-size: 14px; opacity: 0.7; }
+
+  .view-toggle {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 4px;
+    margin-bottom: 16px;
+  }
+
+  .view-btn {
+    flex: 1;
+    background: transparent;
+    border: none;
+    padding: 8px 12px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    cursor: pointer;
+    border-radius: 7px;
+  }
+
+  .view-btn.active { background: var(--ink); color: var(--bg); }
+
+  .month-nav {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding: 0 4px;
+  }
+
+  .month-title { font-size: 22px; font-weight: 400; letter-spacing: -0.01em; }
+  .month-title .year { color: var(--ink-soft); margin-left: 8px; font-style: italic; }
+  .month-title .sub { color: var(--ink-soft); font-style: italic; font-size: 14px; margin-left: 8px; }
+
+  .nav-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    color: var(--ink);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    font-size: 18px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-family: serif;
+  }
+
+  .nav-btn:active { background: var(--ink); color: var(--bg); transform: scale(0.95); }
+
+  /* Month grid */
+  .calendar {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .weekdays { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-bottom: 8px; }
+
+  .weekday {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    text-align: center;
+    padding: 6px 0;
+    font-family: 'SF Mono', 'Menlo', monospace;
+  }
+
+  .days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+
+  .day {
+    aspect-ratio: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 6px;
+    font-size: 16px;
+    font-weight: 400;
+    cursor: pointer;
+    border: 1px solid var(--line);
+    user-select: none;
+    background: var(--surface);
+    color: var(--ink);
+    position: relative;
+  }
+
+  .day.empty { cursor: default; pointer-events: none; background: transparent; border: none; }
+
+  .day.with-kid::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 12px 12px 0;
+    border-color: transparent var(--accent) transparent transparent;
+    border-top-right-radius: 6px;
+  }
+
+  .day .dots {
+    position: absolute;
+    bottom: 3px;
+    left: 0;
+    right: 0;
+    display: flex;
+    justify-content: center;
+    gap: 2px;
+    pointer-events: none;
+  }
+
+  .day .dots-bday {
+    position: absolute;
+    top: 3px;
+    left: 3px;
+    right: 14px;
+    display: flex;
+    justify-content: flex-start;
+    gap: 2px;
+    pointer-events: none;
+  }
+
+  .day .dot { width: 4px; height: 4px; border-radius: 50%; background: var(--event-dot); }
+  .day .dot.sub { background: var(--sub-dot); }
+  .day .dot.bday { background: var(--bday-dot); }
+
+  .day .dot-overflow {
+    font-size: 8px;
+    line-height: 1;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    margin-left: 1px;
+  }
+
+  .day.today { border: 1.5px solid var(--ink); }
+  .day.selected { box-shadow: 0 0 0 2px var(--accent); }
+
+  /* Year grid */
+  .year-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+
+  .mini-month {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 10px 8px;
+    box-shadow: var(--shadow);
+    cursor: pointer;
+  }
+
+  .mini-month:active { transform: scale(0.97); }
+
+  .mini-month-title {
+    font-size: 10px;
+    font-weight: 500;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    text-align: center;
+    margin-bottom: 6px;
+  }
+
+  .mini-days { display: grid; grid-template-columns: repeat(7, 1fr); gap: 1px; }
+  .mini-day { aspect-ratio: 1; border-radius: 1.5px; background: var(--line); }
+  .mini-day.empty { background: transparent; }
+  .mini-day.with-kid { background: var(--accent); }
+
+  .mini-month-count {
+    text-align: center;
+    margin-top: 6px;
+    font-size: 11px;
+    color: var(--ink);
+    font-family: 'SF Mono', 'Menlo', monospace;
+  }
+
+  /* Week timeline view */
+  .week-view {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    box-shadow: var(--shadow);
+    overflow: hidden;
+  }
+
+  .week-allday-strip {
+    display: grid;
+    grid-template-columns: 36px repeat(7, 1fr);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+    min-height: 30px;
+    max-height: 80px;
+    overflow-y: auto;
+  }
+
+  .week-allday-spacer { border-right: 1px solid var(--line); }
+
+  .week-allday-cell {
+    border-right: 1px solid var(--line);
+    padding: 3px 4px;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+  }
+
+  .week-allday-cell:last-child { border-right: none; }
+
+  .allday-event {
+    font-size: 9px;
+    background: var(--event-dot);
+    color: var(--bg);
+    padding: 2px 4px;
+    border-radius: 3px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .allday-event.sub { background: var(--sub-dot); }
+  .allday-event.bday { background: var(--bday-dot); }
+
+  .week-day-headers {
+    display: grid;
+    grid-template-columns: 36px repeat(7, 1fr);
+    border-bottom: 1px solid var(--line);
+    background: var(--bg);
+  }
+
+  .week-day-header-spacer { border-right: 1px solid var(--line); }
+
+  .week-day-header {
+    border-right: 1px solid var(--line);
+    padding: 6px 2px;
+    text-align: center;
+    cursor: pointer;
+    position: relative;
+  }
+
+  .week-day-header:last-child { border-right: none; }
+
+  .week-day-header .dow {
+    font-size: 9px;
+    font-weight: 500;
+    letter-spacing: 0.12em;
+    text-transform: uppercase;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    margin-bottom: 2px;
+  }
+
+  .week-day-header .dom {
+    font-size: 14px;
+    color: var(--ink);
+  }
+
+  .week-day-header.today {
+    background: rgba(26, 26, 26, 0.05);
+  }
+
+  .week-day-header.today .dom {
+    border: 1.5px solid var(--ink);
+    border-radius: 50%;
+    width: 26px;
+    height: 26px;
+    line-height: 22px;
+    margin: 0 auto;
+    display: inline-block;
+  }
+
+  .week-day-header.with-kid::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 0;
+    height: 0;
+    border-style: solid;
+    border-width: 0 8px 8px 0;
+    border-color: transparent var(--accent) transparent transparent;
+  }
+
+  .week-grid {
+    height: 480px;
+    overflow-y: auto;
+    position: relative;
+  }
+
+  .week-grid-inner {
+    display: grid;
+    grid-template-columns: 36px repeat(7, 1fr);
+    position: relative;
+  }
+
+  .hour-label {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    height: 40px;
+    padding: 2px 4px;
+    font-size: 9px;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    text-align: right;
+    line-height: 1;
+  }
+
+  .hour-cell {
+    border-right: 1px solid var(--line);
+    border-bottom: 1px solid var(--line);
+    height: 40px;
+    position: relative;
+  }
+
+  .hour-cell:nth-child(8n+1) { /* not actually used; left here as note */ }
+
+  .hour-cell.today-col {
+    background: rgba(26, 26, 26, 0.025);
+  }
+
+  .timed-event {
+    position: absolute;
+    left: 2px;
+    right: 2px;
+    background: var(--event-dot);
+    color: var(--bg);
+    border-radius: 3px;
+    padding: 2px 4px;
+    font-size: 9px;
+    line-height: 1.2;
+    overflow: hidden;
+    z-index: 2;
+    cursor: pointer;
+  }
+
+  .timed-event.sub { background: var(--sub-dot); cursor: default; }
+
+  .timed-event .te-time {
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 8px;
+    opacity: 0.85;
+  }
+
+  .legend {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 16px;
+    margin-top: 16px;
+    font-size: 11px;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.08em;
+    flex-wrap: wrap;
+  }
+
+  .legend-item { display: flex; align-items: center; gap: 6px; }
+  .legend-corner { width: 12px; height: 12px; position: relative; }
+  .legend-corner::before {
+    content: ''; position: absolute; top: 0; right: 0;
+    width: 0; height: 0;
+    border-style: solid; border-width: 0 8px 8px 0;
+    border-color: transparent var(--accent) transparent transparent;
+  }
+  .legend-dot-event { width: 6px; height: 6px; border-radius: 50%; background: var(--event-dot); }
+  .legend-dot-sub { width: 6px; height: 6px; border-radius: 50%; background: var(--sub-dot); }
+  .legend-dot-bday { width: 6px; height: 6px; border-radius: 50%; background: var(--bday-dot); }
+  .legend-today { width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 3px; }
+
+  .footer-hint { text-align: center; margin-top: 12px; font-size: 11px; color: var(--ink-soft); font-style: italic; }
+
+  /* Events panel — horizontal scroller */
+  .events-panel {
+    margin-top: 24px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 16px;
+    padding: 16px;
+    box-shadow: var(--shadow);
+  }
+
+  .events-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 12px;
+    padding-bottom: 12px;
+    border-bottom: 1px solid var(--line);
+  }
+
+  .events-title { font-size: 14px; font-weight: 500; letter-spacing: -0.01em; }
+  .events-title .sub {
+    color: var(--ink-soft); font-style: italic; margin-left: 6px; font-weight: 400; font-size: 12px;
+  }
+
+  .events-tabs {
+    display: flex; gap: 4px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; padding: 3px;
+  }
+
+  .events-tab {
+    background: transparent; border: none;
+    padding: 5px 10px; font-size: 10px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    color: var(--ink-soft); cursor: pointer;
+    border-radius: 5px;
+  }
+
+  .events-tab.active { background: var(--ink); color: var(--bg); }
+
+  /* Day tab body */
+  .events-day-body { min-height: 100px; }
+
+  .events-list { display: flex; flex-direction: column; gap: 8px; min-height: 60px; }
+
+  /* Week tab — horizontal scroll columns */
+  .events-week-scroller {
+    display: flex;
+    overflow-x: auto;
+    scroll-snap-type: x mandatory;
+    gap: 12px;
+    padding-bottom: 8px;
+    -webkit-overflow-scrolling: touch;
+  }
+
+  .events-week-col {
+    flex: 0 0 calc(50% - 6px);
+    scroll-snap-align: start;
+    min-width: 0;
+  }
+
+  .events-week-col-header {
+    font-size: 10px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    color: var(--ink-soft);
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    padding: 4px 4px 8px;
+    border-bottom: 1px solid var(--line);
+    margin-bottom: 8px;
+  }
+
+  .events-week-col-header.today { color: var(--ink); }
+  .events-week-col-header.with-kid::after {
+    content: ' ●';
+    color: var(--accent);
+  }
+
+  .events-week-col-list {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+    min-height: 40px;
+  }
+
+  .event-item {
+    display: flex; align-items: flex-start; gap: 10px;
+    padding: 10px 12px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 8px; cursor: pointer;
+  }
+
+  .event-item.subscribed { border-left: 3px solid var(--sub-dot); cursor: default; }
+  .event-item:not(.subscribed):active { transform: scale(0.99); }
+
+  .event-time {
+    font-size: 11px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    min-width: 60px;
+    padding-top: 1px;
+  }
+  .event-time.notime { color: transparent; }
+  .event-title { flex: 1; font-size: 14px; }
+  .event-source {
+    font-size: 10px; color: var(--sub-dot);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.05em; margin-top: 2px;
+  }
+
+  /* Compact event for week column */
+  .event-item-compact {
+    padding: 8px 10px;
+    background: var(--bg); border: 1px solid var(--line);
+    border-radius: 6px; cursor: pointer;
+    font-size: 12px;
+  }
+  .event-item-compact.subscribed { border-left: 2px solid var(--sub-dot); cursor: default; }
+  .event-item-compact .ec-time {
+    font-size: 9px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    color: var(--ink-soft);
+    letter-spacing: 0.04em;
+    margin-bottom: 2px;
+  }
+
+  .events-empty {
+    text-align: center; padding: 20px 0;
+    color: var(--ink-soft); font-style: italic; font-size: 13px;
+  }
+  .events-empty.compact { padding: 10px 0; font-size: 11px; }
+
+  .add-event-btn {
+    width: 100%;
+    background: transparent;
+    border: 1px dashed var(--line);
+    color: var(--ink-soft);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .toggle-kid-btn {
+    width: 100%;
+    background: var(--bg);
+    border: 1px solid var(--line);
+    color: var(--ink);
+    border-radius: 8px;
+    padding: 10px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.05em;
+    cursor: pointer;
+    margin-top: 8px;
+  }
+
+  .toggle-kid-btn.active {
+    background: var(--accent); color: var(--bg); border-color: var(--accent);
+  }
+
+  /* Stats — compact at bottom */
+  .stats-compact {
+    margin-top: 28px;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    box-shadow: var(--shadow);
+    font-size: 12px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.04em;
+    color: var(--ink-soft);
+    display: flex;
+    align-items: center;
+    justify-content: space-around;
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  .stats-compact .stat-piece { white-space: nowrap; }
+  .stats-compact .stat-num { color: var(--ink); font-weight: 500; }
+  .stats-compact .stat-pct { color: var(--accent); margin-left: 4px; }
+
+  /* Modals */
+  .modal-backdrop {
+    position: fixed; inset: 0;
+    background: rgba(26, 26, 26, 0.4);
+    display: none; align-items: flex-end; justify-content: center;
+    z-index: 100;
+  }
+
+  .modal-backdrop.show { display: flex; }
+
+  .modal {
+    background: var(--bg);
+    width: 100%; max-width: 480px;
+    border-radius: 20px 20px 0 0;
+    padding: 24px 20px 32px;
+    box-shadow: 0 -4px 20px rgba(0,0,0,0.1);
+    max-height: 85vh; overflow-y: auto;
+  }
+
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--line); border-radius: 2px;
+    margin: 0 auto 20px;
+  }
+
+  .modal-title {
+    font-size: 13px; font-weight: 500;
+    letter-spacing: 0.18em; text-transform: uppercase;
+    color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    margin-bottom: 16px; text-align: center;
+  }
+
+  .menu-action {
+    display: block; width: 100%;
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: 12px; padding: 16px 18px;
+    font-size: 15px; color: var(--ink); text-align: left;
+    cursor: pointer; margin-bottom: 8px;
+    font-family: inherit;
+  }
+
+  .menu-action.danger { color: #a04040; }
+
+  .menu-action-sub {
+    display: block; font-size: 11px;
+    color: var(--ink-soft); margin-top: 4px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.04em;
+  }
+
+  .form-row { margin-bottom: 14px; }
+
+  .form-row label {
+    display: block; font-size: 10px;
+    font-weight: 500; letter-spacing: 0.14em;
+    text-transform: uppercase; color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    margin-bottom: 6px;
+  }
+
+  .form-row input, .form-row select {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 15px;
+    font-family: inherit;
+    color: var(--ink);
+  }
+
+  .form-row input:focus, .form-row select:focus {
+    outline: none; border-color: var(--accent);
+  }
+
+  .time-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  .form-help {
+    font-size: 11px; color: var(--ink-soft);
+    margin-top: 6px; font-style: italic; line-height: 1.4;
+  }
+
+  .switch-row {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    margin-bottom: 14px;
+  }
+
+  .switch-label { font-size: 14px; }
+  .switch-help { font-size: 11px; color: var(--ink-soft); margin-top: 2px; font-style: italic; }
+
+  .switch {
+    position: relative;
+    width: 42px; height: 24px;
+    background: var(--line);
+    border-radius: 12px;
+    cursor: pointer;
+    transition: background 0.2s ease;
+    flex-shrink: 0;
+    margin-left: 12px;
+  }
+
+  .switch.on { background: var(--accent); }
+
+  .switch::after {
+    content: '';
+    position: absolute;
+    top: 2px; left: 2px;
+    width: 20px; height: 20px;
+    background: white;
+    border-radius: 50%;
+    transition: transform 0.2s ease;
+    box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+  }
+
+  .switch.on::after { transform: translateX(18px); }
+
+  .btn-primary {
+    width: 100%;
+    background: var(--accent); color: var(--bg);
+    border: none; border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.1em; text-transform: uppercase;
+    cursor: pointer; margin-top: 8px;
+  }
+
+  .btn-primary:active { transform: scale(0.98); }
+
+  .btn-secondary {
+    width: 100%;
+    background: transparent;
+    color: var(--ink-soft);
+    border: 1px solid var(--line);
+    border-radius: 12px;
+    padding: 12px;
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer; margin-top: 8px;
+  }
+
+  .sub-list-item {
+    background: var(--surface);
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    padding: 12px 14px;
+    margin-bottom: 8px;
+    display: flex; align-items: center; gap: 10px;
+  }
+
+  .sub-list-item .name { flex: 1; font-size: 14px; }
+  .sub-list-item .meta {
+    font-size: 10px; color: var(--ink-soft);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.04em; margin-top: 2px;
+  }
+  .sub-list-item .meta.error { color: var(--danger); }
+
+  .icon-btn {
+    background: transparent;
+    border: 1px solid var(--line);
+    border-radius: 6px;
+    padding: 6px 10px;
+    font-size: 12px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    cursor: pointer;
+    color: var(--ink-soft);
+  }
+
+  .file-input { display: none; }
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(100px);
+    background: var(--ink);
+    color: var(--bg);
+    padding: 12px 20px;
+    border-radius: 24px;
+    font-size: 13px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.05em;
+    transition: transform 0.3s ease;
+    z-index: 200;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.2);
+    max-width: 90vw;
+    text-align: center;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+
+  .spinner {
+    display: inline-block;
+    width: 10px; height: 10px;
+    border: 1.5px solid currentColor;
+    border-right-color: transparent;
+    border-radius: 50%;
+    animation: spin 0.7s linear infinite;
+    margin-right: 6px;
+    vertical-align: middle;
+  }
+
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Family Time</h1>
+      <button class="menu-btn" id="menu-btn" aria-label="Menu">⋯</button>
+    </header>
+
+    <button class="sync-status" id="sync-status">
+      <span id="sync-text">Sync status</span>
+      <span class="arrow">↻</span>
+    </button>
+
+    <div class="view-toggle">
+      <button class="view-btn" data-view="day">Day</button>
+      <button class="view-btn" data-view="week">Week</button>
+      <button class="view-btn active" data-view="month">Month</button>
+      <button class="view-btn" data-view="year">Year</button>
+    </div>
+
+    <!-- Calendar area: shows one of: month grid, week timeline, year grid, or day-only header -->
+    <div id="calendar-area">
+      <div class="month-nav">
+        <button class="nav-btn" id="prev-btn" aria-label="Previous">‹</button>
+        <div class="month-title">
+          <span id="cal-title-main"></span><span class="sub" id="cal-title-sub"></span>
+        </div>
+        <button class="nav-btn" id="next-btn" aria-label="Next">›</button>
+      </div>
+
+      <!-- Month grid -->
+      <div class="calendar" id="month-grid-wrap">
+        <div class="weekdays">
+          <div class="weekday">Sun</div><div class="weekday">Mon</div><div class="weekday">Tue</div>
+          <div class="weekday">Wed</div><div class="weekday">Thu</div><div class="weekday">Fri</div>
+          <div class="weekday">Sat</div>
+        </div>
+        <div class="days" id="days"></div>
+      </div>
+
+      <!-- Year grid -->
+      <div class="year-grid" id="year-grid" style="display:none;"></div>
+
+      <!-- Week timeline -->
+      <div class="week-view" id="week-view-wrap" style="display:none;">
+        <div class="week-allday-strip" id="week-allday-strip"></div>
+        <div class="week-day-headers" id="week-day-headers"></div>
+        <div class="week-grid" id="week-grid">
+          <div class="week-grid-inner" id="week-grid-inner"></div>
+        </div>
+      </div>
+
+      <div class="legend" id="legend">
+        <div class="legend-item"><div class="legend-corner"></div>With kid</div>
+        <div class="legend-item"><div class="legend-dot-event"></div>My event</div>
+        <div class="legend-item"><div class="legend-dot-sub"></div>Subscribed</div>
+        <div class="legend-item"><div class="legend-dot-bday"></div>Birthday</div>
+        <div class="legend-item"><div class="legend-today"></div>Today</div>
+      </div>
+
+      <p class="footer-hint" id="footer-hint">Tap to toggle "with kid" • Long-press for events</p>
+    </div>
+
+    <!-- Events panel -->
+    <div class="events-panel">
+      <div class="events-header">
+        <div class="events-title">
+          <span id="events-title-text">Events</span>
+          <span class="sub" id="events-title-sub"></span>
+        </div>
+        <div class="events-tabs">
+          <button class="events-tab active" data-tab="day">Day</button>
+          <button class="events-tab" data-tab="week">Week</button>
+        </div>
+      </div>
+
+      <div class="events-day-body" id="events-day-body">
+        <div class="events-list" id="events-list"></div>
+        <button class="toggle-kid-btn" id="toggle-kid-btn" style="display:none;">With kid</button>
+        <button class="add-event-btn" id="add-event-btn" style="display:none;">+ Add event</button>
+      </div>
+
+      <div id="events-week-body" style="display:none;">
+        <div class="events-week-scroller" id="events-week-scroller"></div>
+      </div>
+    </div>
+
+    <!-- Stats compact -->
+    <div class="stats-compact" id="stats-compact"></div>
+  </div>
+
+  <!-- Main menu modal -->
+  <div class="modal-backdrop" id="modal-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Menu</div>
+      <button class="menu-action" id="settings-btn">
+        Sync settings
+        <span class="menu-action-sub" id="settings-status">Configure GitHub sync</span>
+      </button>
+      <button class="menu-action" id="subs-btn">
+        Subscribed calendars
+        <span class="menu-action-sub" id="subs-status">Manage iCal subscriptions</span>
+      </button>
+      <button class="menu-action" id="bdays-btn">
+        Birthdays
+        <span class="menu-action-sub" id="bdays-status">Manage recurring birthdays</span>
+      </button>
+      <button class="menu-action" id="export-btn">
+        Export local backup
+        <span class="menu-action-sub">Download data as a file</span>
+      </button>
+      <button class="menu-action" id="import-btn">
+        Import local backup
+        <span class="menu-action-sub">Restore from a previously exported file</span>
+      </button>
+      <button class="menu-action danger" id="clear-btn">
+        Clear all data
+        <span class="menu-action-sub">Wipe local data (does not delete from GitHub)</span>
+      </button>
+      <input type="file" id="file-input" class="file-input" accept=".json,application/json" />
+    </div>
+  </div>
+
+  <!-- Sync settings modal -->
+  <div class="modal-backdrop" id="settings-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Sync Settings</div>
+      <div class="form-row">
+        <label for="gh-user">GitHub username</label>
+        <input type="text" id="gh-user" autocomplete="off" autocapitalize="off" autocorrect="off" />
+      </div>
+      <div class="form-row">
+        <label for="gh-repo">Private repo name</label>
+        <input type="text" id="gh-repo" autocomplete="off" autocapitalize="off" autocorrect="off" />
+      </div>
+      <div class="form-row">
+        <label for="gh-file">File path in repo</label>
+        <input type="text" id="gh-file" autocomplete="off" autocapitalize="off" autocorrect="off" />
+      </div>
+      <div class="form-row">
+        <label for="gh-token">Personal access token</label>
+        <input type="password" id="gh-token" autocomplete="off" autocapitalize="off" autocorrect="off" />
+        <p class="form-help">Stored only on this device.</p>
+      </div>
+      <button class="btn-primary" id="save-settings-btn">Save & Test</button>
+      <button class="menu-action danger" id="clear-settings-btn" style="margin-top: 12px;">
+        Disconnect
+        <span class="menu-action-sub">Remove sync settings from this device</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Subscriptions modal -->
+  <div class="modal-backdrop" id="subs-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Subscribed Calendars</div>
+      <div class="switch-row">
+        <div>
+          <div class="switch-label">Use CORS proxy</div>
+          <div class="switch-help">Lets the app fetch most calendar feeds. Off by default.</div>
+        </div>
+        <div class="switch" id="cors-switch"></div>
+      </div>
+      <div id="subs-list-container"></div>
+      <button class="btn-primary" id="add-sub-btn">+ Add subscription</button>
+      <button class="btn-secondary" id="refresh-subs-btn">Refresh all now</button>
+    </div>
+  </div>
+
+  <!-- Add/edit subscription modal -->
+  <div class="modal-backdrop" id="sub-edit-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="sub-edit-title">New Subscription</div>
+      <div class="form-row">
+        <label for="sub-name">Name</label>
+        <input type="text" id="sub-name" placeholder="School calendar" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label for="sub-url">iCal URL</label>
+        <input type="url" id="sub-url" placeholder="https://..." autocomplete="off" autocapitalize="off" autocorrect="off" />
+        <p class="form-help">A link ending in .ics or returning iCalendar data.</p>
+      </div>
+      <button class="btn-primary" id="save-sub-btn">Save & Fetch</button>
+      <button class="menu-action danger" id="delete-sub-btn" style="display:none; margin-top: 12px;">
+        Delete subscription
+      </button>
+      <button class="btn-secondary" id="cancel-sub-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Birthdays list modal -->
+  <div class="modal-backdrop" id="bdays-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Birthdays</div>
+      <div id="bdays-list-container"></div>
+      <button class="btn-primary" id="add-bday-btn">+ Add birthday</button>
+    </div>
+  </div>
+
+  <!-- Add/edit birthday modal -->
+  <div class="modal-backdrop" id="bday-edit-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="bday-edit-title">New Birthday</div>
+      <div class="form-row">
+        <label for="bday-name">Name</label>
+        <input type="text" id="bday-name" placeholder="John" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label>Date</label>
+        <div class="time-row">
+          <select id="bday-month"></select>
+          <select id="bday-day"></select>
+          <span></span>
+        </div>
+      </div>
+      <button class="btn-primary" id="save-bday-btn">Save</button>
+      <button class="menu-action danger" id="delete-bday-btn" style="display:none; margin-top: 12px;">
+        Delete birthday
+      </button>
+      <button class="btn-secondary" id="cancel-bday-btn">Cancel</button>
+    </div>
+  </div>
+
+  <!-- Event editor modal -->
+  <div class="modal-backdrop" id="event-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="event-modal-title">New Event</div>
+      <div class="form-row">
+        <label for="event-title">Title</label>
+        <input type="text" id="event-title" placeholder="Swim lessons" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label>Time (optional)</label>
+        <div class="time-row">
+          <select id="event-hour"><option value="">--</option></select>
+          <select id="event-minute"><option value="">--</option></select>
+          <select id="event-period">
+            <option value="AM">AM</option>
+            <option value="PM">PM</option>
+          </select>
+        </div>
+      </div>
+      <button class="btn-primary" id="save-event-btn">Save</button>
+      <button class="menu-action danger" id="delete-event-btn" style="display:none; margin-top: 12px;">
+        Delete event
+      </button>
+      <button class="btn-secondary" id="cancel-event-btn">Cancel</button>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+<script>
+  const STORAGE_KEY = 'family-time-data-v2';
+  const SETTINGS_KEY = 'family-time-sync-settings';
+  const SYNC_META_KEY = 'family-time-sync-meta';
+  const SUBS_KEY = 'family-time-subscriptions';
+  const SUB_CACHE_KEY = 'family-time-sub-cache';
+  const CORS_KEY = 'family-time-use-cors-proxy';
+
+  const MONTHS = ['January','February','March','April','May','June',
+                  'July','August','September','October','November','December'];
+  const MONTHS_SHORT = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
+  const DAY_NAMES = ['Sunday','Monday','Tuesday','Wednesday','Thursday','Friday','Saturday'];
+  const DAY_SHORT = ['Sun','Mon','Tue','Wed','Thu','Fri','Sat'];
+
+  const WEEK_HOUR_START = 6;  // 6 AM
+  const WEEK_HOUR_END = 22;   // 10 PM (so we render 6,7,...,21)
+  const HOUR_HEIGHT = 40;     // px
+
+  // === State ===
+  let familyData = { days: {}, events: {}, birthdays: {} };
+  let viewDate = new Date();  // anchor date — meaning depends on currentView
+  viewDate.setHours(0, 0, 0, 0);
+  let currentView = 'month';  // 'day' | 'week' | 'month' | 'year'
+  let selectedDateKey = null; // for events panel
+  let eventsTab = 'day';
+  let editingEventId = null;
+  let editingEventDateKey = null;
+  let editingSubId = null;
+  let editingBdayKey = null;
+
+  let syncSettings = null;
+  let syncMeta = { lastSync: null, lastError: null, sha: null };
+  let syncInProgress = false;
+  let pendingWrite = false;
+
+  let subscriptions = [];
+  let subCache = {};
+  let useCorsProxy = false;
+
+  // === Migration ===
+  function migrateIfNeeded(raw) {
+    if (!raw || typeof raw !== 'object') return { days: {}, events: {}, birthdays: {} };
+    if (raw.days || raw.events || raw.birthdays) {
+      return { days: raw.days || {}, events: raw.events || {}, birthdays: raw.birthdays || {} };
+    }
+    const days = {};
+    for (const k in raw) if (raw[k] === true) days[k] = true;
+    return { days, events: {}, birthdays: {} };
+  }
+
+  // === Storage ===
+  function loadLocal() {
+    try {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      familyData = raw ? migrateIfNeeded(JSON.parse(raw)) : { days: {}, events: {}, birthdays: {} };
+    } catch (e) { familyData = { days: {}, events: {}, birthdays: {} }; }
+
+    if (Object.keys(familyData.days).length === 0) {
+      try {
+        const oldRaw = localStorage.getItem('family-time-data-v1');
+        if (oldRaw) {
+          familyData.days = JSON.parse(oldRaw);
+          localStorage.setItem(STORAGE_KEY, JSON.stringify(familyData));
+        }
+      } catch (e) {}
+    }
+
+    try { syncSettings = JSON.parse(localStorage.getItem(SETTINGS_KEY)) || null; } catch (e) { syncSettings = null; }
+    try { syncMeta = JSON.parse(localStorage.getItem(SYNC_META_KEY)) || { lastSync: null, lastError: null, sha: null }; } catch (e) { syncMeta = { lastSync: null, lastError: null, sha: null }; }
+    try { subscriptions = JSON.parse(localStorage.getItem(SUBS_KEY)) || []; } catch (e) { subscriptions = []; }
+    try { subCache = JSON.parse(localStorage.getItem(SUB_CACHE_KEY)) || {}; } catch (e) { subCache = {}; }
+    useCorsProxy = localStorage.getItem(CORS_KEY) === 'true';
+  }
+
+  function saveLocal() { localStorage.setItem(STORAGE_KEY, JSON.stringify(familyData)); }
+  function saveSubs() { localStorage.setItem(SUBS_KEY, JSON.stringify(subscriptions)); }
+  function saveSubCache() { localStorage.setItem(SUB_CACHE_KEY, JSON.stringify(subCache)); }
+  function saveCorsPref() { localStorage.setItem(CORS_KEY, useCorsProxy ? 'true' : 'false'); }
+  function saveSyncMeta() { localStorage.setItem(SYNC_META_KEY, JSON.stringify(syncMeta)); }
+
+  // === Helpers ===
+  function dateKey(year, month, day) {
+    return `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`;
+  }
+  function dateToKey(d) { return dateKey(d.getFullYear(), d.getMonth(), d.getDate()); }
+  function parseDateKey(key) {
+    const [y, m, d] = key.split('-').map(Number);
+    return new Date(y, m - 1, d);
+  }
+  function isToday(year, month, day) {
+    const t = new Date();
+    return t.getFullYear() === year && t.getMonth() === month && t.getDate() === day;
+  }
+  function isSameDay(a, b) {
+    return a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+  }
+  function startOfWeek(d) {
+    const r = new Date(d);
+    r.setHours(0,0,0,0);
+    r.setDate(r.getDate() - r.getDay());
+    return r;
+  }
+  function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2, 7); }
+  function showToast(msg) {
+    const t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    setTimeout(() => t.classList.remove('show'), 2500);
+  }
+  function formatTime(event) {
+    if (event.hour == null || event.hour === '') return '';
+    const h = parseInt(event.hour, 10);
+    const m = parseInt(event.minute || '0', 10);
+    return `${h}:${String(m).padStart(2, '0')} ${event.period || 'AM'}`;
+  }
+  function formatHour(h24) {
+    let h = h24 % 12;
+    if (h === 0) h = 12;
+    return `${h} ${h24 < 12 ? 'AM' : 'PM'}`;
+  }
+  function timeToMinutes(event) {
+    if (event.hour == null || event.hour === '') return 9999;
+    let h = parseInt(event.hour, 10);
+    const m = parseInt(event.minute || '0', 10);
+    if (event.period === 'PM' && h !== 12) h += 12;
+    if (event.period === 'AM' && h === 12) h = 0;
+    return h * 60 + m;
+  }
+  function sortEvents(events) {
+    return events.slice().sort((a, b) => timeToMinutes(a) - timeToMinutes(b));
+  }
+  function b64encode(str) { return btoa(unescape(encodeURIComponent(str))); }
+  function b64decode(str) { return decodeURIComponent(escape(atob(str))); }
+
+  // === iCal parser ===
+  function parseICS(text) {
+    const lines = unfoldLines(text);
+    const events = [];
+    let current = null;
+    for (const line of lines) {
+      if (line === 'BEGIN:VEVENT') current = {};
+      else if (line === 'END:VEVENT') {
+        if (current && current.dtstart) events.push(current);
+        current = null;
+      } else if (current) {
+        const colonIdx = line.indexOf(':');
+        if (colonIdx === -1) continue;
+        let key = line.slice(0, colonIdx);
+        const value = line.slice(colonIdx + 1);
+        const semiIdx = key.indexOf(';');
+        const params = semiIdx === -1 ? '' : key.slice(semiIdx);
+        if (semiIdx !== -1) key = key.slice(0, semiIdx);
+        if (key === 'SUMMARY') current.summary = unescapeICS(value);
+        else if (key === 'DTSTART') current.dtstart = parseICSDate(value, params);
+        else if (key === 'DTEND') current.dtend = parseICSDate(value, params);
+      }
+    }
+    return events;
+  }
+  function unfoldLines(text) {
+    const raw = text.replace(/\r\n/g, '\n').split('\n');
+    const out = [];
+    for (const line of raw) {
+      if ((line.startsWith(' ') || line.startsWith('\t')) && out.length > 0) {
+        out[out.length - 1] += line.slice(1);
+      } else out.push(line);
+    }
+    return out;
+  }
+  function unescapeICS(str) {
+    return str.replace(/\\n/g, '\n').replace(/\\,/g, ',').replace(/\\;/g, ';').replace(/\\\\/g, '\\');
+  }
+  function parseICSDate(value, params) {
+    const isAllDay = params.includes('VALUE=DATE') || (value.length === 8);
+    if (isAllDay) {
+      const y = parseInt(value.slice(0, 4), 10);
+      const m = parseInt(value.slice(4, 6), 10) - 1;
+      const d = parseInt(value.slice(6, 8), 10);
+      return { date: new Date(y, m, d), allDay: true };
+    }
+    const y = parseInt(value.slice(0, 4), 10);
+    const mo = parseInt(value.slice(4, 6), 10) - 1;
+    const d = parseInt(value.slice(6, 8), 10);
+    const h = parseInt(value.slice(9, 11), 10);
+    const mi = parseInt(value.slice(11, 13), 10);
+    const isUTC = value.endsWith('Z');
+    const date = isUTC ? new Date(Date.UTC(y, mo, d, h, mi)) : new Date(y, mo, d, h, mi);
+    return { date, allDay: false };
+  }
+  function icalEventsToDayMap(icsEvents, sourceName) {
+    const result = {};
+    for (const ev of icsEvents) {
+      if (!ev.dtstart) continue;
+      const date = ev.dtstart.date;
+      const key = dateToKey(date);
+      const eventObj = {
+        id: 'sub-' + genId(),
+        title: ev.summary || '(no title)',
+        sourceName,
+        subscribed: true,
+        allDay: !!ev.dtstart.allDay
+      };
+      if (!ev.dtstart.allDay) {
+        let h = date.getHours();
+        const m = date.getMinutes();
+        const period = h >= 12 ? 'PM' : 'AM';
+        h = h % 12;
+        if (h === 0) h = 12;
+        eventObj.hour = h;
+        eventObj.minute = m;
+        eventObj.period = period;
+      }
+      if (!result[key]) result[key] = [];
+      result[key].push(eventObj);
+    }
+    return result;
+  }
+
+  // === Subscription fetching ===
+  async function fetchSubscription(sub) {
+    sub.lastError = null;
+    let text;
+    try {
+      const directRes = await fetch(sub.url, { method: 'GET' });
+      if (!directRes.ok) throw new Error(`HTTP ${directRes.status}`);
+      text = await directRes.text();
+    } catch (directErr) {
+      if (useCorsProxy) {
+        try {
+          const proxyUrl = `https://corsproxy.io/?url=${encodeURIComponent(sub.url)}`;
+          const proxyRes = await fetch(proxyUrl);
+          if (!proxyRes.ok) throw new Error(`Proxy HTTP ${proxyRes.status}`);
+          text = await proxyRes.text();
+        } catch (proxyErr) {
+          sub.lastError = `Direct: ${directErr.message}; Proxy: ${proxyErr.message}`;
+          return null;
+        }
+      } else {
+        sub.lastError = `${directErr.message} (try CORS proxy)`;
+        return null;
+      }
+    }
+    try {
+      const events = parseICS(text);
+      sub.lastFetched = Date.now();
+      sub.eventCount = events.length;
+      return icalEventsToDayMap(events, sub.name);
+    } catch (parseErr) {
+      sub.lastError = `Parse error: ${parseErr.message}`;
+      return null;
+    }
+  }
+  async function refreshAllSubscriptions(silent = false) {
+    if (subscriptions.length === 0) return;
+    if (!silent) showToast('Refreshing subscriptions…');
+    let anyChanged = false;
+    for (const sub of subscriptions) {
+      const dayMap = await fetchSubscription(sub);
+      if (dayMap !== null) {
+        subCache[sub.id] = dayMap;
+        anyChanged = true;
+      }
+    }
+    saveSubs();
+    if (anyChanged) saveSubCache();
+    renderSubsList();
+    renderCalendar();
+    renderEvents();
+    if (!silent) showToast('Subscriptions refreshed');
+  }
+
+  function getBirthdaysForDay(key) {
+    // key is YYYY-MM-DD; birthdays are keyed MM-DD
+    const mmdd = key.slice(5);
+    const result = [];
+    for (const bdayKey in (familyData.birthdays || {})) {
+      if (bdayKey === mmdd) {
+        result.push({
+          id: 'bday-' + bdayKey,
+          title: `🎂 ${familyData.birthdays[bdayKey]}'s Birthday`,
+          birthday: true,
+          allDay: true,
+          name: familyData.birthdays[bdayKey],
+          mmdd: bdayKey
+        });
+      }
+    }
+    return result;
+  }
+
+  function getEventsForDay(key) {
+    const own = (familyData.events[key] || []).map(e => ({ ...e, subscribed: false, allDay: false }));
+    const subs = [];
+    for (const subId in subCache) {
+      const dayEvents = subCache[subId][key] || [];
+      for (const e of dayEvents) subs.push(e);
+    }
+    const bdays = getBirthdaysForDay(key);
+    return { own, subs, bdays, all: [...bdays, ...own, ...subs] };
+  }
+
+  function getEventCountForDay(key) {
+    const own = (familyData.events[key] || []).length;
+    let subs = 0;
+    for (const subId in subCache) subs += (subCache[subId][key] || []).length;
+    const bdays = getBirthdaysForDay(key).length;
+    return { own, subs, bdays, total: own + subs + bdays };
+  }
+
+  // === GitHub sync ===
+  async function githubGet() {
+    if (!syncSettings) throw new Error('Not configured');
+    const { user, repo, file, token } = syncSettings;
+    const url = `https://api.github.com/repos/${user}/${repo}/contents/${file}`;
+    const res = await fetch(url, {
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
+    });
+    if (res.status === 404) return { data: { days: {}, events: {}, birthdays: {} }, sha: null };
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`GitHub fetch failed (${res.status}): ${text.slice(0, 100)}`);
+    }
+    const json = await res.json();
+    let data = { days: {}, events: {}, birthdays: {} };
+    try { data = migrateIfNeeded(JSON.parse(b64decode(json.content))); } catch (e) {}
+    return { data, sha: json.sha };
+  }
+  async function githubPut(data, sha) {
+    if (!syncSettings) throw new Error('Not configured');
+    const { user, repo, file, token } = syncSettings;
+    const url = `https://api.github.com/repos/${user}/${repo}/contents/${file}`;
+    const body = {
+      message: `Update from Family Time app — ${new Date().toISOString()}`,
+      content: b64encode(JSON.stringify(data, null, 2))
+    };
+    if (sha) body.sha = sha;
+    const res = await fetch(url, {
+      method: 'PUT',
+      headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'Content-Type': 'application/json', 'X-GitHub-Api-Version': '2022-11-28' },
+      body: JSON.stringify(body)
+    });
+    if (!res.ok) {
+      const text = await res.text();
+      throw new Error(`GitHub write failed (${res.status}): ${text.slice(0, 100)}`);
+    }
+    const json = await res.json();
+    return json.content.sha;
+  }
+  function mergeData(local, remote) {
+    return {
+      days: { ...local.days, ...remote.days },
+      events: { ...local.events, ...remote.events },
+      birthdays: { ...local.birthdays, ...remote.birthdays }
+    };
+  }
+  async function pullFromGitHub() {
+    if (!syncSettings || syncInProgress) return;
+    syncInProgress = true;
+    updateSyncStatus();
+    try {
+      const { data, sha } = await githubGet();
+      familyData = mergeData(familyData, data);
+      saveLocal();
+      syncMeta.sha = sha;
+      syncMeta.lastSync = Date.now();
+      syncMeta.lastError = null;
+      saveSyncMeta();
+      renderCalendar();
+      renderEvents();
+    } catch (err) {
+      syncMeta.lastError = err.message;
+      saveSyncMeta();
+    } finally {
+      syncInProgress = false;
+      updateSyncStatus();
+    }
+  }
+  async function pushToGitHub() {
+    if (!syncSettings || syncInProgress) { pendingWrite = true; return; }
+    syncInProgress = true;
+    updateSyncStatus();
+    try {
+      const newSha = await githubPut(familyData, syncMeta.sha);
+      syncMeta.sha = newSha;
+      syncMeta.lastSync = Date.now();
+      syncMeta.lastError = null;
+      saveSyncMeta();
+    } catch (err) {
+      syncMeta.lastError = err.message;
+      saveSyncMeta();
+    } finally {
+      syncInProgress = false;
+      updateSyncStatus();
+      if (pendingWrite) { pendingWrite = false; setTimeout(pushToGitHub, 100); }
+    }
+  }
+  let pushTimer = null;
+  function schedulePush() {
+    if (!syncSettings) return;
+    if (pushTimer) clearTimeout(pushTimer);
+    pushTimer = setTimeout(pushToGitHub, 1500);
+  }
+  function updateSyncStatus() {
+    const statusEl = document.getElementById('sync-status');
+    const textEl = document.getElementById('sync-text');
+    const arrowEl = statusEl.querySelector('.arrow');
+    statusEl.classList.remove('warn', 'danger', 'muted');
+    if (!syncSettings) {
+      statusEl.classList.add('muted');
+      textEl.innerHTML = 'Not synced — tap to set up';
+      arrowEl.textContent = '⚙';
+      return;
+    }
+    if (syncInProgress) { textEl.innerHTML = '<span class="spinner"></span>Syncing…'; arrowEl.textContent = ''; return; }
+    if (syncMeta.lastError) { statusEl.classList.add('danger'); textEl.textContent = 'Sync error — tap to retry'; arrowEl.textContent = '!'; return; }
+    if (!syncMeta.lastSync) { textEl.textContent = 'Tap to sync'; arrowEl.textContent = '↻'; return; }
+    const mins = Math.floor((Date.now() - syncMeta.lastSync) / 60000);
+    if (mins < 1) textEl.textContent = 'Synced just now';
+    else if (mins < 60) textEl.textContent = `Synced ${mins} min ago`;
+    else {
+      const hours = Math.floor(mins / 60);
+      if (hours < 24) textEl.textContent = `Synced ${hours}h ago`;
+      else {
+        const days = Math.floor(hours / 24);
+        textEl.textContent = `Synced ${days}d ago`;
+        if (days >= 3) statusEl.classList.add('warn');
+      }
+    }
+    arrowEl.textContent = '↻';
+  }
+
+  // === Day toggle ===
+  function toggleDay(key) {
+    if (familyData.days[key]) delete familyData.days[key];
+    else familyData.days[key] = true;
+    saveLocal();
+    renderCalendar();
+    renderEvents();
+    updateStats();
+    schedulePush();
+  }
+
+  // === Master render dispatcher ===
+  function renderCalendar() {
+    document.getElementById('month-grid-wrap').style.display = currentView === 'month' ? 'block' : 'none';
+    document.getElementById('year-grid').style.display = currentView === 'year' ? 'grid' : 'none';
+    document.getElementById('week-view-wrap').style.display = currentView === 'week' ? 'block' : 'none';
+    const calArea = document.getElementById('calendar-area');
+    const navWrap = calArea.querySelector('.month-nav');
+    const legend = document.getElementById('legend');
+    const hint = document.getElementById('footer-hint');
+
+    if (currentView === 'day') {
+      navWrap.style.display = 'flex';
+      legend.style.display = 'none';
+      hint.style.display = 'none';
+      // Hide all the calendar bodies; day view is purely about the events panel below
+      document.getElementById('month-grid-wrap').style.display = 'none';
+      renderDayHeader();
+    } else if (currentView === 'month') {
+      navWrap.style.display = 'flex';
+      legend.style.display = 'flex';
+      hint.style.display = 'block';
+      hint.textContent = 'Tap for events • Long-press to toggle "with kid"';
+      renderMonth();
+    } else if (currentView === 'year') {
+      navWrap.style.display = 'flex';
+      legend.style.display = 'flex';
+      hint.style.display = 'block';
+      hint.textContent = 'Tap a month to view';
+      renderYear();
+    } else if (currentView === 'week') {
+      navWrap.style.display = 'flex';
+      legend.style.display = 'flex';
+      hint.style.display = 'block';
+      hint.textContent = 'Tap a day to switch to Day view';
+      renderWeek();
+    }
+    updateSyncStatus();
+    updateStats();
+  }
+  function renderDayHeader() {
+    const t = document.getElementById('cal-title-main');
+    const s = document.getElementById('cal-title-sub');
+    t.textContent = `${DAY_NAMES[viewDate.getDay()]}`;
+    s.textContent = `${MONTHS_SHORT[viewDate.getMonth()]} ${viewDate.getDate()}, ${viewDate.getFullYear()}`;
+    // In day view, syncing selectedDateKey to viewDate so events panel shows it
+    selectedDateKey = dateToKey(viewDate);
+  }
+
+  function renderMonth() {
+    const year = viewDate.getFullYear();
+    const month = viewDate.getMonth();
+    document.getElementById('cal-title-main').textContent = MONTHS[month];
+    document.getElementById('cal-title-sub').textContent = year;
+
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    const daysContainer = document.getElementById('days');
+    daysContainer.innerHTML = '';
+
+    for (let i = 0; i < firstDay; i++) {
+      const empty = document.createElement('div');
+      empty.className = 'day empty';
+      daysContainer.appendChild(empty);
+    }
+
+    for (let d = 1; d <= daysInMonth; d++) {
+      const key = dateKey(year, month, d);
+      const dayEl = document.createElement('div');
+      dayEl.className = 'day';
+      if (familyData.days[key]) dayEl.classList.add('with-kid');
+      if (isToday(year, month, d)) dayEl.classList.add('today');
+      if (selectedDateKey === key) dayEl.classList.add('selected');
+
+      const numSpan = document.createElement('span');
+      numSpan.textContent = d;
+      dayEl.appendChild(numSpan);
+
+      const counts = getEventCountForDay(key);
+      // Birthday dots — top row
+      if (counts.bdays > 0) {
+        const bdayContainer = document.createElement('div');
+        bdayContainer.className = 'dots-bday';
+        for (let i = 0; i < counts.bdays; i++) {
+          const dot = document.createElement('div');
+          dot.className = 'dot bday';
+          bdayContainer.appendChild(dot);
+        }
+        dayEl.appendChild(bdayContainer);
+      }
+      // Regular event dots — bottom row (excludes birthdays)
+      const nonBdayTotal = counts.own + counts.subs;
+      if (nonBdayTotal > 0) {
+        const dotsContainer = document.createElement('div');
+        dotsContainer.className = 'dots';
+        let shown = 0;
+        for (let i = 0; i < counts.own && shown < 3; i++, shown++) {
+          const dot = document.createElement('div');
+          dot.className = 'dot';
+          dotsContainer.appendChild(dot);
+        }
+        for (let i = 0; i < counts.subs && shown < 3; i++, shown++) {
+          const dot = document.createElement('div');
+          dot.className = 'dot sub';
+          dotsContainer.appendChild(dot);
+        }
+        if (nonBdayTotal > 3) {
+          const overflow = document.createElement('div');
+          overflow.className = 'dot-overflow';
+          overflow.textContent = '+';
+          dotsContainer.appendChild(overflow);
+        }
+        dayEl.appendChild(dotsContainer);
+      }
+
+      attachMonthDayHandlers(dayEl, key);
+      daysContainer.appendChild(dayEl);
+    }
+  }
+
+  function attachMonthDayHandlers(el, key) {
+    let longPressTimer = null;
+    let longPressFired = false;
+    const start = () => {
+      longPressFired = false;
+      longPressTimer = setTimeout(() => {
+        longPressFired = true;
+        toggleDay(key);
+        if (navigator.vibrate) navigator.vibrate(15);
+      }, 450);
+    };
+    const end = () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = null;
+      if (!longPressFired) selectDayInPanel(key);
+    };
+    const cancel = () => {
+      if (longPressTimer) clearTimeout(longPressTimer);
+      longPressTimer = null;
+      longPressFired = true;
+    };
+    el.addEventListener('touchstart', start, { passive: true });
+    el.addEventListener('touchend', end);
+    el.addEventListener('touchmove', cancel, { passive: true });
+    el.addEventListener('touchcancel', cancel);
+    el.addEventListener('mousedown', start);
+    el.addEventListener('mouseup', end);
+    el.addEventListener('mouseleave', cancel);
+    el.addEventListener('click', (e) => e.preventDefault());
+  }
+
+  function selectDayInPanel(key) {
+    selectedDateKey = key;
+    renderCalendar();
+    renderEvents();
+  }
+
+  function renderYear() {
+    const year = viewDate.getFullYear();
+    document.getElementById('cal-title-main').textContent = year;
+    document.getElementById('cal-title-sub').textContent = '';
+
+    const grid = document.getElementById('year-grid');
+    grid.innerHTML = '';
+    for (let m = 0; m < 12; m++) {
+      const monthEl = document.createElement('div');
+      monthEl.className = 'mini-month';
+      monthEl.addEventListener('click', () => {
+        viewDate = new Date(year, m, 1);
+        switchView('month');
+      });
+      const title = document.createElement('div');
+      title.className = 'mini-month-title';
+      title.textContent = MONTHS_SHORT[m];
+      monthEl.appendChild(title);
+      const miniDays = document.createElement('div');
+      miniDays.className = 'mini-days';
+      const firstDay = new Date(year, m, 1).getDay();
+      const daysInMonth = new Date(year, m + 1, 0).getDate();
+      for (let i = 0; i < firstDay; i++) {
+        const empty = document.createElement('div');
+        empty.className = 'mini-day empty';
+        miniDays.appendChild(empty);
+      }
+      let monthCount = 0;
+      for (let d = 1; d <= daysInMonth; d++) {
+        const key = dateKey(year, m, d);
+        const dayEl = document.createElement('div');
+        dayEl.className = 'mini-day';
+        if (familyData.days[key]) { dayEl.classList.add('with-kid'); monthCount++; }
+        miniDays.appendChild(dayEl);
+      }
+      monthEl.appendChild(miniDays);
+      const count = document.createElement('div');
+      count.className = 'mini-month-count';
+      count.textContent = monthCount;
+      monthEl.appendChild(count);
+      grid.appendChild(monthEl);
+    }
+  }
+
+  // === Week timeline render ===
+  function renderWeek() {
+    const weekStart = startOfWeek(viewDate);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    document.getElementById('cal-title-main').textContent = `Week of ${MONTHS_SHORT[weekStart.getMonth()]} ${weekStart.getDate()}`;
+    document.getElementById('cal-title-sub').textContent = weekStart.getFullYear();
+
+    // All-day strip
+    const stripEl = document.getElementById('week-allday-strip');
+    stripEl.innerHTML = '';
+    const stripSpacer = document.createElement('div');
+    stripSpacer.className = 'week-allday-spacer';
+    stripEl.appendChild(stripSpacer);
+
+    let hasAnyAllDay = false;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const key = dateToKey(d);
+      const cell = document.createElement('div');
+      cell.className = 'week-allday-cell';
+      const { all } = getEventsForDay(key);
+      const allDayEvents = all.filter(e => e.allDay);
+      if (allDayEvents.length > 0) hasAnyAllDay = true;
+      for (const ev of allDayEvents) {
+        const el = document.createElement('div');
+        let cls = 'allday-event';
+        if (ev.birthday) cls += ' bday';
+        else if (ev.subscribed) cls += ' sub';
+        el.className = cls;
+        el.textContent = ev.title;
+        el.title = ev.title;
+        cell.appendChild(el);
+      }
+      stripEl.appendChild(cell);
+    }
+    stripEl.style.display = hasAnyAllDay ? 'grid' : 'none';
+
+    // Day headers
+    const headersEl = document.getElementById('week-day-headers');
+    headersEl.innerHTML = '';
+    const headerSpacer = document.createElement('div');
+    headerSpacer.className = 'week-day-header-spacer';
+    headersEl.appendChild(headerSpacer);
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const key = dateToKey(d);
+      const h = document.createElement('div');
+      h.className = 'week-day-header';
+      if (isSameDay(d, new Date())) h.classList.add('today');
+      if (familyData.days[key]) h.classList.add('with-kid');
+      const dow = document.createElement('div');
+      dow.className = 'dow';
+      dow.textContent = DAY_SHORT[d.getDay()];
+      h.appendChild(dow);
+      const dom = document.createElement('div');
+      dom.className = 'dom';
+      dom.textContent = d.getDate();
+      h.appendChild(dom);
+      h.addEventListener('click', () => {
+        viewDate = new Date(d);
+        switchView('day');
+      });
+      headersEl.appendChild(h);
+    }
+
+    // Hour grid
+    const gridInner = document.getElementById('week-grid-inner');
+    gridInner.innerHTML = '';
+
+    // Determine which column is today (if today is in the visible week)
+    const today = new Date();
+    let todayCol = -1;
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      if (isSameDay(d, today)) { todayCol = i; break; }
+    }
+
+    for (let h = WEEK_HOUR_START; h < WEEK_HOUR_END; h++) {
+      const label = document.createElement('div');
+      label.className = 'hour-label';
+      label.textContent = formatHour(h);
+      gridInner.appendChild(label);
+      for (let col = 0; col < 7; col++) {
+        const cell = document.createElement('div');
+        cell.className = 'hour-cell';
+        if (col === todayCol) cell.classList.add('today-col');
+        gridInner.appendChild(cell);
+      }
+    }
+
+    // Position timed events absolutely over the grid
+    // We position them per day column — each column starts at left = 36px + col*( (containerWidth - 36px) / 7 )
+    // Use percentage so it's responsive.
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const key = dateToKey(d);
+      const { all } = getEventsForDay(key);
+      const timed = all.filter(e => !e.allDay && e.hour != null && e.hour !== '');
+
+      for (const ev of timed) {
+        const mins = timeToMinutes(ev);
+        if (mins < WEEK_HOUR_START * 60 || mins >= WEEK_HOUR_END * 60) continue;
+        const minutesFromStart = mins - WEEK_HOUR_START * 60;
+        const top = (minutesFromStart / 60) * HOUR_HEIGHT;
+
+        const el = document.createElement('div');
+        el.className = 'timed-event' + (ev.subscribed ? ' sub' : '');
+        el.style.top = top + 'px';
+        el.style.height = (HOUR_HEIGHT - 4) + 'px';
+
+        // Column positioning via percentage: 36px label + 7 equal cols
+        // Use calc for left and width
+        el.style.left = `calc(36px + (100% - 36px) * ${i} / 7 + 2px)`;
+        el.style.width = `calc((100% - 36px) / 7 - 4px)`;
+        el.style.right = 'auto';
+
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'te-time';
+        timeDiv.textContent = formatTime(ev);
+        el.appendChild(timeDiv);
+
+        const titleDiv = document.createElement('div');
+        titleDiv.textContent = ev.title;
+        el.appendChild(titleDiv);
+
+        if (!ev.subscribed) {
+          el.addEventListener('click', () => openEventModal(key, ev.id));
+        }
+
+        gridInner.appendChild(el);
+      }
+    }
+  }
+
+  // === Stats compact ===
+  function updateStats() {
+    const today = new Date();
+    const thisYear = today.getFullYear();
+    const todayKey = dateToKey(today);
+
+    // Month stat follows viewDate
+    const viewYear = viewDate.getFullYear();
+    const viewMonth = viewDate.getMonth();
+    const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-`;
+    let monthCount = 0;
+    for (const key in familyData.days) {
+      if (familyData.days[key] && key.startsWith(monthPrefix)) monthCount++;
+    }
+    const daysInViewMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
+    const monthPct = Math.round((monthCount / daysInViewMonth) * 100);
+
+    // Year stat stays pinned to current year, only counts marked days <= today
+    const yearPrefix = `${thisYear}-`;
+    let yearCountToDate = 0;
+    for (const key in familyData.days) {
+      if (familyData.days[key] && key.startsWith(yearPrefix) && key <= todayKey) yearCountToDate++;
+    }
+    const startOfYear = new Date(thisYear, 0, 1);
+    const daysElapsed = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+    const yearPct = daysElapsed > 0 ? Math.round((yearCountToDate / daysElapsed) * 100) : 0;
+
+    const el = document.getElementById('stats-compact');
+    el.innerHTML = `
+      <span class="stat-piece">${MONTHS_SHORT[viewMonth]} ${viewYear}: <span class="stat-num">${monthCount}</span>/${daysInViewMonth} - <span class="stat-pct">${monthPct}%</span></span>
+      <span class="stat-piece">${thisYear}: <span class="stat-num">${yearCountToDate}</span>/${daysElapsed} - <span class="stat-pct">${yearPct}%</span></span>
+    `;
+  }
+
+  // === Events panel ===
+  function renderEvents() {
+    const dayBody = document.getElementById('events-day-body');
+    const weekBody = document.getElementById('events-week-body');
+    const titleEl = document.getElementById('events-title-text');
+    const subEl = document.getElementById('events-title-sub');
+
+    if (eventsTab === 'day') {
+      dayBody.style.display = 'block';
+      weekBody.style.display = 'none';
+      renderEventsDayBody();
+    } else {
+      dayBody.style.display = 'none';
+      weekBody.style.display = 'block';
+      renderEventsWeekBody();
+    }
+  }
+
+  function renderEventsDayBody() {
+    const titleEl = document.getElementById('events-title-text');
+    const subEl = document.getElementById('events-title-sub');
+    const listEl = document.getElementById('events-list');
+    const toggleKidBtn = document.getElementById('toggle-kid-btn');
+    const addBtn = document.getElementById('add-event-btn');
+
+    listEl.innerHTML = '';
+
+    if (!selectedDateKey) {
+      titleEl.textContent = 'Events';
+      subEl.textContent = '';
+      listEl.innerHTML = '<div class="events-empty">Tap a day to see its events</div>';
+      toggleKidBtn.style.display = 'none';
+      addBtn.style.display = 'none';
+      return;
+    }
+
+    addBtn.style.display = 'block';
+    toggleKidBtn.style.display = 'block';
+    const isWithKid = !!familyData.days[selectedDateKey];
+    toggleKidBtn.textContent = isWithKid ? '✓ With kid' : 'Mark as with kid';
+    toggleKidBtn.classList.toggle('active', isWithKid);
+
+    const date = parseDateKey(selectedDateKey);
+    titleEl.textContent = DAY_NAMES[date.getDay()];
+    subEl.textContent = `${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}`;
+
+    const { all } = getEventsForDay(selectedDateKey);
+    const events = sortEvents(all);
+    if (events.length === 0) {
+      listEl.innerHTML = '<div class="events-empty">No events for this day</div>';
+    } else {
+      events.forEach(ev => listEl.appendChild(renderEventItem(ev, selectedDateKey)));
+    }
+  }
+
+  function renderEventItem(event, dateK) {
+    const item = document.createElement('div');
+    item.className = 'event-item';
+    if (event.subscribed || event.birthday) {
+      item.classList.add('subscribed');
+    } else {
+      item.addEventListener('click', () => openEventModal(dateK, event.id));
+    }
+    const time = document.createElement('div');
+    time.className = 'event-time';
+    const t = formatTime(event);
+    if (t) time.textContent = t;
+    else time.classList.add('notime');
+    item.appendChild(time);
+
+    const titleWrap = document.createElement('div');
+    titleWrap.style.flex = '1';
+    const title = document.createElement('div');
+    title.className = 'event-title';
+    title.textContent = event.title;
+    titleWrap.appendChild(title);
+    if (event.subscribed && event.sourceName) {
+      const src = document.createElement('div');
+      src.className = 'event-source';
+      src.textContent = event.sourceName;
+      titleWrap.appendChild(src);
+    }
+    item.appendChild(titleWrap);
+    return item;
+  }
+
+  function renderEventsWeekBody() {
+    const titleEl = document.getElementById('events-title-text');
+    const subEl = document.getElementById('events-title-sub');
+    const scroller = document.getElementById('events-week-scroller');
+    scroller.innerHTML = '';
+
+    // Anchor: selectedDateKey if set, otherwise viewDate
+    const anchor = selectedDateKey ? parseDateKey(selectedDateKey) : new Date(viewDate);
+    const weekStart = startOfWeek(anchor);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekEnd.getDate() + 6);
+
+    titleEl.textContent = 'Week';
+    subEl.textContent = `${MONTHS_SHORT[weekStart.getMonth()]} ${weekStart.getDate()} – ${MONTHS_SHORT[weekEnd.getMonth()]} ${weekEnd.getDate()}`;
+
+    const today = new Date();
+    let scrollToCol = null;
+
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(weekStart);
+      d.setDate(d.getDate() + i);
+      const key = dateToKey(d);
+
+      const col = document.createElement('div');
+      col.className = 'events-week-col';
+
+      const header = document.createElement('div');
+      header.className = 'events-week-col-header';
+      if (isSameDay(d, today)) header.classList.add('today');
+      if (familyData.days[key]) header.classList.add('with-kid');
+      header.textContent = `${DAY_SHORT[d.getDay()]} · ${d.getDate()}`;
+      col.appendChild(header);
+
+      const list = document.createElement('div');
+      list.className = 'events-week-col-list';
+      const { all } = getEventsForDay(key);
+      const events = sortEvents(all);
+      if (events.length === 0) {
+        const empty = document.createElement('div');
+        empty.className = 'events-empty compact';
+        empty.textContent = '—';
+        list.appendChild(empty);
+      } else {
+        events.forEach(ev => list.appendChild(renderEventItemCompact(ev, key)));
+      }
+      col.appendChild(list);
+
+      scroller.appendChild(col);
+
+      if (selectedDateKey && key === selectedDateKey) scrollToCol = i;
+      else if (!selectedDateKey && isSameDay(d, today)) scrollToCol = i;
+    }
+
+    // Snap scroll position
+    if (scrollToCol !== null && scrollToCol > 0) {
+      requestAnimationFrame(() => {
+        const colWidth = scroller.scrollWidth / 7;
+        scroller.scrollLeft = colWidth * scrollToCol;
+      });
+    }
+  }
+
+  function renderEventItemCompact(event, dateK) {
+    const item = document.createElement('div');
+    item.className = 'event-item-compact';
+    if (event.subscribed || event.birthday) item.classList.add('subscribed');
+    else item.addEventListener('click', () => openEventModal(dateK, event.id));
+
+    const t = formatTime(event);
+    if (t) {
+      const timeDiv = document.createElement('div');
+      timeDiv.className = 'ec-time';
+      timeDiv.textContent = t;
+      item.appendChild(timeDiv);
+    }
+    const titleDiv = document.createElement('div');
+    titleDiv.textContent = event.title;
+    item.appendChild(titleDiv);
+    return item;
+  }
+
+  // === Event modal ===
+  function populateTimeSelectors() {
+    const hourSel = document.getElementById('event-hour');
+    const minSel = document.getElementById('event-minute');
+    for (let h = 1; h <= 12; h++) {
+      const opt = document.createElement('option');
+      opt.value = h; opt.textContent = h;
+      hourSel.appendChild(opt);
+    }
+    for (let m of [0, 15, 30, 45]) {
+      const opt = document.createElement('option');
+      opt.value = m; opt.textContent = String(m).padStart(2, '0');
+      minSel.appendChild(opt);
+    }
+  }
+  function openEventModal(dateK, eventId) {
+    editingEventDateKey = dateK;
+    editingEventId = eventId;
+    const titleEl = document.getElementById('event-modal-title');
+    const titleInput = document.getElementById('event-title');
+    const hourSel = document.getElementById('event-hour');
+    const minSel = document.getElementById('event-minute');
+    const periodSel = document.getElementById('event-period');
+    const deleteBtn = document.getElementById('delete-event-btn');
+    if (eventId) {
+      const events = familyData.events[dateK] || [];
+      const ev = events.find(e => e.id === eventId);
+      if (!ev) return;
+      titleEl.textContent = 'Edit Event';
+      titleInput.value = ev.title;
+      hourSel.value = ev.hour ?? '';
+      minSel.value = ev.minute ?? '';
+      periodSel.value = ev.period || 'AM';
+      deleteBtn.style.display = 'block';
+    } else {
+      titleEl.textContent = 'New Event';
+      titleInput.value = '';
+      hourSel.value = '';
+      minSel.value = '';
+      periodSel.value = 'AM';
+      deleteBtn.style.display = 'none';
+    }
+    document.getElementById('event-backdrop').classList.add('show');
+    setTimeout(() => titleInput.focus(), 100);
+  }
+  function closeEventModal() {
+    document.getElementById('event-backdrop').classList.remove('show');
+    editingEventId = null;
+    editingEventDateKey = null;
+  }
+  function saveEvent() {
+    const title = document.getElementById('event-title').value.trim();
+    if (!title) { showToast('Title required'); return; }
+    const hour = document.getElementById('event-hour').value;
+    const minute = document.getElementById('event-minute').value;
+    const period = document.getElementById('event-period').value;
+    if (!familyData.events[editingEventDateKey]) familyData.events[editingEventDateKey] = [];
+    const eventData = {
+      id: editingEventId || genId(),
+      title,
+      hour: hour === '' ? null : hour,
+      minute: minute === '' ? null : minute,
+      period
+    };
+    if (editingEventId) {
+      const idx = familyData.events[editingEventDateKey].findIndex(e => e.id === editingEventId);
+      if (idx >= 0) familyData.events[editingEventDateKey][idx] = eventData;
+    } else {
+      familyData.events[editingEventDateKey].push(eventData);
+    }
+    saveLocal();
+    closeEventModal();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    showToast(editingEventId ? 'Event updated' : 'Event added');
+  }
+  function deleteEvent() {
+    if (!editingEventId || !editingEventDateKey) return;
+    if (!confirm('Delete this event?')) return;
+    familyData.events[editingEventDateKey] = (familyData.events[editingEventDateKey] || []).filter(e => e.id !== editingEventId);
+    if (familyData.events[editingEventDateKey].length === 0) delete familyData.events[editingEventDateKey];
+    saveLocal();
+    closeEventModal();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    showToast('Event deleted');
+  }
+
+  // === Birthdays UI ===
+  function updateBdaysStatusInMenu() {
+    const el = document.getElementById('bdays-status');
+    const count = Object.keys(familyData.birthdays || {}).length;
+    if (count === 0) el.textContent = 'Manage recurring birthdays';
+    else el.textContent = `${count} saved`;
+  }
+
+  function populateBdaySelectors() {
+    const monthSel = document.getElementById('bday-month');
+    monthSel.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = String(m).padStart(2, '0');
+      opt.textContent = MONTHS_SHORT[m - 1];
+      monthSel.appendChild(opt);
+    }
+    refreshBdayDayOptions();
+    monthSel.addEventListener('change', refreshBdayDayOptions);
+  }
+
+  function refreshBdayDayOptions() {
+    const monthSel = document.getElementById('bday-month');
+    const daySel = document.getElementById('bday-day');
+    const month = parseInt(monthSel.value, 10) || 1;
+    // Use a leap year so Feb 29 is selectable
+    const daysInMonth = new Date(2024, month, 0).getDate();
+    const prev = daySel.value;
+    daySel.innerHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const opt = document.createElement('option');
+      opt.value = String(d).padStart(2, '0');
+      opt.textContent = d;
+      daySel.appendChild(opt);
+    }
+    if (prev) daySel.value = prev;
+  }
+
+  function renderBdaysList() {
+    const container = document.getElementById('bdays-list-container');
+    container.innerHTML = '';
+    const keys = Object.keys(familyData.birthdays || {}).sort();
+    if (keys.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'events-empty';
+      empty.textContent = 'No birthdays yet';
+      container.appendChild(empty);
+      return;
+    }
+    for (const mmdd of keys) {
+      const item = document.createElement('div');
+      item.className = 'sub-list-item';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = `🎂 ${familyData.birthdays[mmdd]}`;
+      info.appendChild(name);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const [mm, dd] = mmdd.split('-');
+      const monthName = MONTHS_SHORT[parseInt(mm, 10) - 1];
+      meta.textContent = `${monthName} ${parseInt(dd, 10)}`;
+      info.appendChild(meta);
+      item.appendChild(info);
+      const editBtn = document.createElement('button');
+      editBtn.className = 'icon-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => openBdayEdit(mmdd));
+      item.appendChild(editBtn);
+      container.appendChild(item);
+    }
+  }
+
+  function openBdaysList() {
+    document.getElementById('modal-backdrop').classList.remove('show');
+    renderBdaysList();
+    document.getElementById('bdays-backdrop').classList.add('show');
+  }
+
+  function openBdayEdit(mmdd) {
+    editingBdayKey = mmdd;
+    const titleEl = document.getElementById('bday-edit-title');
+    const nameInput = document.getElementById('bday-name');
+    const monthSel = document.getElementById('bday-month');
+    const daySel = document.getElementById('bday-day');
+    const deleteBtn = document.getElementById('delete-bday-btn');
+
+    if (mmdd) {
+      titleEl.textContent = 'Edit Birthday';
+      nameInput.value = familyData.birthdays[mmdd] || '';
+      const [mm, dd] = mmdd.split('-');
+      monthSel.value = mm;
+      refreshBdayDayOptions();
+      daySel.value = dd;
+      deleteBtn.style.display = 'block';
+    } else {
+      titleEl.textContent = 'New Birthday';
+      nameInput.value = '';
+      monthSel.value = '01';
+      refreshBdayDayOptions();
+      daySel.value = '01';
+      deleteBtn.style.display = 'none';
+    }
+
+    document.getElementById('bdays-backdrop').classList.remove('show');
+    document.getElementById('bday-edit-backdrop').classList.add('show');
+    setTimeout(() => nameInput.focus(), 100);
+  }
+
+  function closeBdayEdit() {
+    document.getElementById('bday-edit-backdrop').classList.remove('show');
+    editingBdayKey = null;
+  }
+
+  function saveBday() {
+    const name = document.getElementById('bday-name').value.trim();
+    const month = document.getElementById('bday-month').value;
+    const day = document.getElementById('bday-day').value;
+    if (!name) { showToast('Name required'); return; }
+    const newKey = `${month}-${day}`;
+
+    if (!familyData.birthdays) familyData.birthdays = {};
+
+    // If editing and key changed, delete old key
+    if (editingBdayKey && editingBdayKey !== newKey) {
+      delete familyData.birthdays[editingBdayKey];
+    }
+    familyData.birthdays[newKey] = name;
+
+    saveLocal();
+    closeBdayEdit();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    updateBdaysStatusInMenu();
+    document.getElementById('bdays-backdrop').classList.add('show');
+    renderBdaysList();
+    showToast(editingBdayKey ? 'Birthday updated' : 'Birthday added');
+  }
+
+  function deleteBday() {
+    if (!editingBdayKey) return;
+    if (!confirm('Delete this birthday?')) return;
+    delete familyData.birthdays[editingBdayKey];
+    saveLocal();
+    closeBdayEdit();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    updateBdaysStatusInMenu();
+    document.getElementById('bdays-backdrop').classList.add('show');
+    renderBdaysList();
+    showToast('Birthday deleted');
+  }
+
+  // === Subscriptions UI ===
+  function updateSubsStatusInMenu() {
+    const el = document.getElementById('subs-status');
+    if (subscriptions.length === 0) el.textContent = 'Manage iCal subscriptions';
+    else el.textContent = `${subscriptions.length} subscribed`;
+  }
+  function renderSubsList() {
+    const container = document.getElementById('subs-list-container');
+    container.innerHTML = '';
+    document.getElementById('cors-switch').classList.toggle('on', useCorsProxy);
+    if (subscriptions.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'events-empty';
+      empty.textContent = 'No subscriptions yet';
+      container.appendChild(empty);
+      return;
+    }
+    for (const sub of subscriptions) {
+      const item = document.createElement('div');
+      item.className = 'sub-list-item';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = sub.name;
+      info.appendChild(name);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      if (sub.lastError) { meta.classList.add('error'); meta.textContent = sub.lastError.slice(0, 60); }
+      else if (sub.lastFetched) {
+        const mins = Math.floor((Date.now() - sub.lastFetched) / 60000);
+        const count = sub.eventCount || 0;
+        if (mins < 1) meta.textContent = `${count} events · just refreshed`;
+        else if (mins < 60) meta.textContent = `${count} events · ${mins}m ago`;
+        else meta.textContent = `${count} events · ${Math.floor(mins / 60)}h ago`;
+      } else meta.textContent = 'Never fetched';
+      info.appendChild(meta);
+      item.appendChild(info);
+      const editBtn = document.createElement('button');
+      editBtn.className = 'icon-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => openSubEdit(sub.id));
+      item.appendChild(editBtn);
+      container.appendChild(item);
+    }
+  }
+  function openSubsList() {
+    document.getElementById('modal-backdrop').classList.remove('show');
+    renderSubsList();
+    document.getElementById('subs-backdrop').classList.add('show');
+  }
+  function openSubEdit(subId) {
+    editingSubId = subId;
+    const titleEl = document.getElementById('sub-edit-title');
+    const nameInput = document.getElementById('sub-name');
+    const urlInput = document.getElementById('sub-url');
+    const deleteBtn = document.getElementById('delete-sub-btn');
+    if (subId) {
+      const sub = subscriptions.find(s => s.id === subId);
+      if (!sub) return;
+      titleEl.textContent = 'Edit Subscription';
+      nameInput.value = sub.name;
+      urlInput.value = sub.url;
+      deleteBtn.style.display = 'block';
+    } else {
+      titleEl.textContent = 'New Subscription';
+      nameInput.value = '';
+      urlInput.value = '';
+      deleteBtn.style.display = 'none';
+    }
+    document.getElementById('subs-backdrop').classList.remove('show');
+    document.getElementById('sub-edit-backdrop').classList.add('show');
+    setTimeout(() => nameInput.focus(), 100);
+  }
+  function closeSubEdit() {
+    document.getElementById('sub-edit-backdrop').classList.remove('show');
+    editingSubId = null;
+  }
+  async function saveSub() {
+    const name = document.getElementById('sub-name').value.trim();
+    const url = document.getElementById('sub-url').value.trim();
+    if (!name || !url) { showToast('Name and URL required'); return; }
+    let sub;
+    if (editingSubId) {
+      sub = subscriptions.find(s => s.id === editingSubId);
+      if (!sub) return;
+      sub.name = name;
+      sub.url = url;
+      sub.lastError = null;
+    } else {
+      sub = { id: genId(), name, url, lastFetched: null, lastError: null, eventCount: 0 };
+      subscriptions.push(sub);
+    }
+    saveSubs();
+    closeSubEdit();
+    showToast('Fetching…');
+    const dayMap = await fetchSubscription(sub);
+    if (dayMap !== null) {
+      subCache[sub.id] = dayMap;
+      saveSubCache();
+      saveSubs();
+      showToast(`Loaded ${sub.eventCount} events`);
+    } else {
+      saveSubs();
+      showToast(`Failed: ${sub.lastError ? sub.lastError.slice(0, 50) : 'unknown'}`);
+    }
+    renderCalendar();
+    renderEvents();
+    updateSubsStatusInMenu();
+    document.getElementById('subs-backdrop').classList.add('show');
+    renderSubsList();
+  }
+  function deleteSub() {
+    if (!editingSubId) return;
+    if (!confirm('Delete this subscription?')) return;
+    subscriptions = subscriptions.filter(s => s.id !== editingSubId);
+    delete subCache[editingSubId];
+    saveSubs();
+    saveSubCache();
+    closeSubEdit();
+    renderCalendar();
+    renderEvents();
+    updateSubsStatusInMenu();
+    document.getElementById('subs-backdrop').classList.add('show');
+    renderSubsList();
+    showToast('Subscription deleted');
+  }
+
+  // === View switching & navigation ===
+  function switchView(view) {
+    currentView = view;
+    document.querySelectorAll('.view-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.view === view);
+    });
+    // When switching to Day view, sync selectedDateKey to viewDate
+    if (view === 'day') {
+      selectedDateKey = dateToKey(viewDate);
+      eventsTab = 'day';
+      document.querySelectorAll('.events-tab').forEach(b => b.classList.toggle('active', b.dataset.tab === 'day'));
+    }
+    renderCalendar();
+    renderEvents();
+  }
+
+  function navigatePrev() {
+    if (currentView === 'day') viewDate.setDate(viewDate.getDate() - 1);
+    else if (currentView === 'week') viewDate.setDate(viewDate.getDate() - 7);
+    else if (currentView === 'month') viewDate.setMonth(viewDate.getMonth() - 1);
+    else if (currentView === 'year') viewDate.setFullYear(viewDate.getFullYear() - 1);
+    renderCalendar();
+    if (currentView === 'day') renderEvents();
+  }
+  function navigateNext() {
+    if (currentView === 'day') viewDate.setDate(viewDate.getDate() + 1);
+    else if (currentView === 'week') viewDate.setDate(viewDate.getDate() + 7);
+    else if (currentView === 'month') viewDate.setMonth(viewDate.getMonth() + 1);
+    else if (currentView === 'year') viewDate.setFullYear(viewDate.getFullYear() + 1);
+    renderCalendar();
+    if (currentView === 'day') renderEvents();
+  }
+
+  function doExport() {
+    const blob = new Blob([JSON.stringify(familyData, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'family-time-backup.json';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    showToast('Backup downloaded');
+  }
+
+  // === Wiring ===
+  document.getElementById('prev-btn').addEventListener('click', navigatePrev);
+  document.getElementById('next-btn').addEventListener('click', navigateNext);
+
+  document.querySelectorAll('.view-btn').forEach(btn => {
+    btn.addEventListener('click', () => switchView(btn.dataset.view));
+  });
+
+  document.querySelectorAll('.events-tab').forEach(btn => {
+    btn.addEventListener('click', () => {
+      eventsTab = btn.dataset.tab;
+      document.querySelectorAll('.events-tab').forEach(b => b.classList.toggle('active', b === btn));
+      renderEvents();
+    });
+  });
+
+  document.getElementById('toggle-kid-btn').addEventListener('click', () => {
+    if (selectedDateKey) toggleDay(selectedDateKey);
+  });
+  document.getElementById('add-event-btn').addEventListener('click', () => {
+    if (selectedDateKey) openEventModal(selectedDateKey, null);
+  });
+
+  document.getElementById('save-event-btn').addEventListener('click', saveEvent);
+  document.getElementById('delete-event-btn').addEventListener('click', deleteEvent);
+  document.getElementById('cancel-event-btn').addEventListener('click', closeEventModal);
+
+  document.getElementById('sync-status').addEventListener('click', () => {
+    if (!syncSettings) openSettings();
+    else pullFromGitHub().then(() => {
+      if (!syncMeta.lastError) showToast('Synced from GitHub');
+    });
+  });
+
+  const modalBackdrop = document.getElementById('modal-backdrop');
+  document.getElementById('menu-btn').addEventListener('click', () => {
+    updateSettingsStatusInMenu();
+    updateSubsStatusInMenu();
+    updateBdaysStatusInMenu();
+    modalBackdrop.classList.add('show');
+  });
+  modalBackdrop.addEventListener('click', (e) => {
+    if (e.target === modalBackdrop) modalBackdrop.classList.remove('show');
+  });
+
+  function updateSettingsStatusInMenu() {
+    const el = document.getElementById('settings-status');
+    if (syncSettings) el.textContent = `Connected to ${syncSettings.user}/${syncSettings.repo}`;
+    else el.textContent = 'Configure GitHub sync';
+  }
+
+  const settingsBackdrop = document.getElementById('settings-backdrop');
+  function openSettings() {
+    if (syncSettings) {
+      document.getElementById('gh-user').value = syncSettings.user;
+      document.getElementById('gh-repo').value = syncSettings.repo;
+      document.getElementById('gh-file').value = syncSettings.file;
+      document.getElementById('gh-token').value = syncSettings.token;
+    } else {
+      document.getElementById('gh-user').value = '';
+      document.getElementById('gh-repo').value = '';
+      document.getElementById('gh-file').value = '';
+      document.getElementById('gh-token').value = '';
+    }
+    modalBackdrop.classList.remove('show');
+    settingsBackdrop.classList.add('show');
+  }
+  document.getElementById('settings-btn').addEventListener('click', openSettings);
+  settingsBackdrop.addEventListener('click', (e) => {
+    if (e.target === settingsBackdrop) settingsBackdrop.classList.remove('show');
+  });
+  document.getElementById('save-settings-btn').addEventListener('click', async () => {
+    const user = document.getElementById('gh-user').value.trim();
+    const repo = document.getElementById('gh-repo').value.trim();
+    const file = document.getElementById('gh-file').value.trim() || 'data.json';
+    const token = document.getElementById('gh-token').value.trim();
+    if (!user || !repo || !token) { showToast('All fields required'); return; }
+    syncSettings = { user, repo, file, token };
+    syncInProgress = true;
+    updateSyncStatus();
+    try {
+      const { data, sha } = await githubGet();
+      localStorage.setItem(SETTINGS_KEY, JSON.stringify(syncSettings));
+      familyData = mergeData(familyData, data);
+      saveLocal();
+      syncMeta.sha = sha;
+      syncMeta.lastSync = Date.now();
+      syncMeta.lastError = null;
+      saveSyncMeta();
+      settingsBackdrop.classList.remove('show');
+      renderCalendar();
+      renderEvents();
+      updateStats();
+      showToast('Connected — sync is on');
+      schedulePush();
+    } catch (err) {
+      syncSettings = null;
+      syncMeta.lastError = err.message;
+      showToast('Connection failed: ' + err.message.slice(0, 60));
+    } finally {
+      syncInProgress = false;
+      updateSyncStatus();
+    }
+  });
+  document.getElementById('clear-settings-btn').addEventListener('click', () => {
+    if (confirm('Disconnect from GitHub sync? Local data stays on this device.')) {
+      syncSettings = null;
+      syncMeta = { lastSync: null, lastError: null, sha: null };
+      localStorage.removeItem(SETTINGS_KEY);
+      localStorage.removeItem(SYNC_META_KEY);
+      settingsBackdrop.classList.remove('show');
+      updateSyncStatus();
+      showToast('Disconnected');
+    }
+  });
+
+  document.getElementById('subs-btn').addEventListener('click', openSubsList);
+  document.getElementById('subs-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('subs-backdrop')) {
+      document.getElementById('subs-backdrop').classList.remove('show');
+    }
+  });
+
+  // Birthdays wiring
+  document.getElementById('bdays-btn').addEventListener('click', openBdaysList);
+  document.getElementById('bdays-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('bdays-backdrop')) {
+      document.getElementById('bdays-backdrop').classList.remove('show');
+    }
+  });
+  document.getElementById('add-bday-btn').addEventListener('click', () => openBdayEdit(null));
+  document.getElementById('save-bday-btn').addEventListener('click', saveBday);
+  document.getElementById('delete-bday-btn').addEventListener('click', deleteBday);
+  document.getElementById('cancel-bday-btn').addEventListener('click', () => {
+    closeBdayEdit();
+    document.getElementById('bdays-backdrop').classList.add('show');
+  });
+  document.getElementById('bday-edit-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('bday-edit-backdrop')) closeBdayEdit();
+  });
+  document.getElementById('add-sub-btn').addEventListener('click', () => openSubEdit(null));
+  document.getElementById('refresh-subs-btn').addEventListener('click', () => refreshAllSubscriptions(false));
+  document.getElementById('cors-switch').addEventListener('click', () => {
+    useCorsProxy = !useCorsProxy;
+    saveCorsPref();
+    document.getElementById('cors-switch').classList.toggle('on', useCorsProxy);
+    showToast(useCorsProxy ? 'CORS proxy on' : 'CORS proxy off');
+  });
+  document.getElementById('save-sub-btn').addEventListener('click', saveSub);
+  document.getElementById('delete-sub-btn').addEventListener('click', deleteSub);
+  document.getElementById('cancel-sub-btn').addEventListener('click', () => {
+    closeSubEdit();
+    document.getElementById('subs-backdrop').classList.add('show');
+  });
+  document.getElementById('sub-edit-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('sub-edit-backdrop')) closeSubEdit();
+  });
+
+  document.getElementById('export-btn').addEventListener('click', () => {
+    modalBackdrop.classList.remove('show');
+    doExport();
+  });
+  document.getElementById('import-btn').addEventListener('click', () => {
+    document.getElementById('file-input').click();
+  });
+  document.getElementById('file-input').addEventListener('change', (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      try {
+        const imported = migrateIfNeeded(JSON.parse(ev.target.result));
+        familyData = mergeData(familyData, imported);
+        saveLocal();
+        modalBackdrop.classList.remove('show');
+        renderCalendar();
+        renderEvents();
+        updateStats();
+        schedulePush();
+        showToast('Backup imported');
+      } catch (err) {
+        showToast('Invalid backup file');
+      }
+    };
+    reader.readAsText(file);
+    e.target.value = '';
+  });
+  document.getElementById('clear-btn').addEventListener('click', () => {
+    if (confirm('Clear local data? This does not delete from GitHub.')) {
+      familyData = { days: {}, events: {}, birthdays: {} };
+      saveLocal();
+      modalBackdrop.classList.remove('show');
+      selectedDateKey = null;
+      renderCalendar();
+      renderEvents();
+      updateStats();
+      showToast('Local data cleared');
+    }
+  });
+
+  // === Boot ===
+  populateTimeSelectors();
+  populateBdaySelectors();
+  loadLocal();
+  renderCalendar();
+  renderEvents();
+  updateStats();
+  if (syncSettings) setTimeout(pullFromGitHub, 200);
+  if (subscriptions.length > 0) setTimeout(() => refreshAllSubscriptions(true), 600);
+  setInterval(updateSyncStatus, 60000);
+  setInterval(updateStats, 60000);
+</script>
+</body>
+</html>
