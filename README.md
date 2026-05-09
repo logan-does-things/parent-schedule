@@ -6,7 +6,7 @@ Built mostly from a phone, mostly out of stubbornness.
 
 ## What it does
 
-- **Mark days** — tap a day to view its events, long-press to toggle "with kid"
+- **Mark days** — tap a day to view its events, long-press to toggle "my day"
 - **Track events** — add notes/appointments to any day with optional times (swim lessons 4pm, dentist 2:30pm, etc.)
 - **Subscribe to iCal feeds** — pull in school district calendars, holidays, sports schedules, anything that publishes an `.ics` URL
 - **Recurring birthdays** — add once, shows every year
