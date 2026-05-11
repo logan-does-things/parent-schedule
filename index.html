@@ -1157,6 +1157,7 @@
   let editingEventDateKey = null;
   let editingSubId = null;
   let editingBdayKey = null;
+  let editingBdayIndex = null;
 
   let syncSettings = null;
   let syncMeta = { lastSync: null, lastError: null, sha: null };
@@ -1401,19 +1402,24 @@
 
   function getBirthdaysForDay(key) {
     // key is YYYY-MM-DD; birthdays are keyed MM-DD
+    // Values can be a string (single name) or array of strings (multiple names)
     const mmdd = key.slice(5);
     const result = [];
-    for (const bdayKey in (familyData.birthdays || {})) {
-      if (bdayKey === mmdd) {
-        result.push({
-          id: 'bday-' + bdayKey,
-          title: `🎂 ${familyData.birthdays[bdayKey]}'s Birthday`,
-          birthday: true,
-          allDay: true,
-          name: familyData.birthdays[bdayKey],
-          mmdd: bdayKey
-        });
-      }
+    const value = (familyData.birthdays || {})[mmdd];
+    if (value == null) return result;
+    const names = Array.isArray(value) ? value : [value];
+    for (let i = 0; i < names.length; i++) {
+      const name = names[i];
+      if (!name) continue;
+      result.push({
+        id: `bday-${mmdd}-${i}`,
+        title: `🎂 ${name}'s Birthday`,
+        birthday: true,
+        allDay: true,
+        name: name,
+        mmdd: mmdd,
+        bdayIndex: i
+      });
     }
     return result;
   }
@@ -2222,7 +2228,12 @@
   // === Birthdays UI ===
   function updateBdaysStatusInMenu() {
     const el = document.getElementById('bdays-status');
-    const count = Object.keys(familyData.birthdays || {}).length;
+    const bdays = familyData.birthdays || {};
+    let count = 0;
+    for (const k in bdays) {
+      const v = bdays[k];
+      count += Array.isArray(v) ? v.filter(n => !!n).length : (v ? 1 : 0);
+    }
     if (count === 0) el.textContent = 'Manage recurring birthdays';
     else el.textContent = `${count} saved`;
   }
@@ -2260,26 +2271,39 @@
   function renderBdaysList() {
     const container = document.getElementById('bdays-list-container');
     container.innerHTML = '';
-    const keys = Object.keys(familyData.birthdays || {}).sort();
-    if (keys.length === 0) {
+    const bdays = familyData.birthdays || {};
+    const keys = Object.keys(bdays).sort();
+
+    // Flatten into rows: [{ mmdd, name, index }]
+    const rows = [];
+    for (const mmdd of keys) {
+      const value = bdays[mmdd];
+      const names = Array.isArray(value) ? value : [value];
+      names.forEach((name, i) => {
+        if (name) rows.push({ mmdd, name, index: i });
+      });
+    }
+
+    if (rows.length === 0) {
       const empty = document.createElement('div');
       empty.className = 'events-empty';
       empty.textContent = 'No birthdays yet';
       container.appendChild(empty);
       return;
     }
-    for (const mmdd of keys) {
+
+    for (const row of rows) {
       const item = document.createElement('div');
       item.className = 'sub-list-item';
       const info = document.createElement('div');
       info.style.flex = '1';
       const name = document.createElement('div');
       name.className = 'name';
-      name.textContent = `🎂 ${familyData.birthdays[mmdd]}`;
+      name.textContent = `🎂 ${row.name}`;
       info.appendChild(name);
       const meta = document.createElement('div');
       meta.className = 'meta';
-      const [mm, dd] = mmdd.split('-');
+      const [mm, dd] = row.mmdd.split('-');
       const monthName = MONTHS_SHORT[parseInt(mm, 10) - 1];
       meta.textContent = `${monthName} ${parseInt(dd, 10)}`;
       info.appendChild(meta);
@@ -2287,7 +2311,7 @@
       const editBtn = document.createElement('button');
       editBtn.className = 'icon-btn';
       editBtn.textContent = 'Edit';
-      editBtn.addEventListener('click', () => openBdayEdit(mmdd));
+      editBtn.addEventListener('click', () => openBdayEdit(row.mmdd, row.index));
       item.appendChild(editBtn);
       container.appendChild(item);
     }
@@ -2299,8 +2323,9 @@
     document.getElementById('bdays-backdrop').classList.add('show');
   }
 
-  function openBdayEdit(mmdd) {
+  function openBdayEdit(mmdd, index) {
     editingBdayKey = mmdd;
+    editingBdayIndex = (index == null) ? null : index;
     const titleEl = document.getElementById('bday-edit-title');
     const nameInput = document.getElementById('bday-name');
     const monthSel = document.getElementById('bday-month');
@@ -2309,7 +2334,10 @@
 
     if (mmdd) {
       titleEl.textContent = 'Edit Birthday';
-      nameInput.value = familyData.birthdays[mmdd] || '';
+      const value = familyData.birthdays[mmdd];
+      const names = Array.isArray(value) ? value : [value];
+      const idx = editingBdayIndex != null ? editingBdayIndex : 0;
+      nameInput.value = names[idx] || '';
       const [mm, dd] = mmdd.split('-');
       monthSel.value = mm;
       refreshBdayDayOptions();
@@ -2332,6 +2360,7 @@
   function closeBdayEdit() {
     document.getElementById('bday-edit-backdrop').classList.remove('show');
     editingBdayKey = null;
+    editingBdayIndex = null;
   }
 
   function saveBday() {
@@ -2343,11 +2372,55 @@
 
     if (!familyData.birthdays) familyData.birthdays = {};
 
-    // If editing and key changed, delete old key
-    if (editingBdayKey && editingBdayKey !== newKey) {
-      delete familyData.birthdays[editingBdayKey];
+    // Helper to add a name to a date slot (creating array if needed for collisions)
+    function addNameToKey(key, nameToAdd) {
+      const existing = familyData.birthdays[key];
+      if (existing == null) {
+        familyData.birthdays[key] = nameToAdd;
+      } else if (typeof existing === 'string') {
+        // If the existing name is the same, leave it alone
+        if (existing === nameToAdd) return;
+        familyData.birthdays[key] = [existing, nameToAdd];
+      } else if (Array.isArray(existing)) {
+        if (!existing.includes(nameToAdd)) existing.push(nameToAdd);
+      }
     }
-    familyData.birthdays[newKey] = name;
+
+    // Helper to remove a name at a specific index (or the only name if not array)
+    function removeAtKeyIndex(key, idx) {
+      const existing = familyData.birthdays[key];
+      if (existing == null) return;
+      if (typeof existing === 'string') {
+        // Single name — just delete the key
+        delete familyData.birthdays[key];
+      } else if (Array.isArray(existing)) {
+        existing.splice(idx, 1);
+        if (existing.length === 0) delete familyData.birthdays[key];
+        else if (existing.length === 1) familyData.birthdays[key] = existing[0]; // collapse back to string
+      }
+    }
+
+    if (editingBdayKey != null) {
+      // Editing existing
+      if (editingBdayKey === newKey) {
+        // Same date, possibly renamed — update name in place
+        const existing = familyData.birthdays[editingBdayKey];
+        if (typeof existing === 'string') {
+          familyData.birthdays[editingBdayKey] = name;
+        } else if (Array.isArray(existing)) {
+          const idx = editingBdayIndex != null ? editingBdayIndex : 0;
+          existing[idx] = name;
+        }
+      } else {
+        // Date changed — remove from old slot, add to new
+        const idx = editingBdayIndex != null ? editingBdayIndex : 0;
+        removeAtKeyIndex(editingBdayKey, idx);
+        addNameToKey(newKey, name);
+      }
+    } else {
+      // Adding new
+      addNameToKey(newKey, name);
+    }
 
     saveLocal();
     closeBdayEdit();
@@ -2361,9 +2434,17 @@
   }
 
   function deleteBday() {
-    if (!editingBdayKey) return;
+    if (editingBdayKey == null) return;
     if (!confirm('Delete this birthday?')) return;
-    delete familyData.birthdays[editingBdayKey];
+    const existing = familyData.birthdays[editingBdayKey];
+    if (typeof existing === 'string') {
+      delete familyData.birthdays[editingBdayKey];
+    } else if (Array.isArray(existing)) {
+      const idx = editingBdayIndex != null ? editingBdayIndex : 0;
+      existing.splice(idx, 1);
+      if (existing.length === 0) delete familyData.birthdays[editingBdayKey];
+      else if (existing.length === 1) familyData.birthdays[editingBdayKey] = existing[0];
+    }
     saveLocal();
     closeBdayEdit();
     renderCalendar();
