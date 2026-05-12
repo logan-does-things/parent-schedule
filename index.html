@@ -21,6 +21,10 @@
     --event-dot: #c47a3d;
     --sub-dot: #8a9a9e;
     --bday-dot: #7a5b8c;
+    --pto: #4a8c5f;
+    --pto-soft: #d8e8dc;
+    --pto: #4a8c5f;
+    --pto-soft: #d8e8dc;
     --shadow: 0 1px 2px rgba(0,0,0,0.04), 0 4px 12px rgba(0,0,0,0.04);
   }
 
@@ -204,7 +208,7 @@
 
   .day .dots {
     position: absolute;
-    bottom: 3px;
+    bottom: 7px;
     left: 0;
     right: 0;
     display: flex;
@@ -212,6 +216,17 @@
     gap: 2px;
     pointer-events: none;
   }
+
+  .day .pto-bar {
+    position: absolute;
+    bottom: 0;
+    height: 3px;
+    background: var(--pto);
+    pointer-events: none;
+  }
+  .day .pto-bar.am { left: 0; width: 50%; border-bottom-left-radius: 6px; }
+  .day .pto-bar.pm { right: 0; width: 50%; border-bottom-right-radius: 6px; }
+  .day .pto-bar.full { left: 0; right: 0; width: 100%; border-bottom-left-radius: 6px; border-bottom-right-radius: 6px; }
 
   .day .dots-bday {
     position: absolute;
@@ -436,6 +451,7 @@
   }
 
   .timed-event.sub { background: var(--sub-dot); cursor: default; }
+  .timed-event.pto { background: var(--pto); }
 
   .timed-event .te-time {
     font-family: 'SF Mono', 'Menlo', monospace;
@@ -467,6 +483,7 @@
   .legend-dot-event { width: 6px; height: 6px; border-radius: 50%; background: var(--event-dot); }
   .legend-dot-sub { width: 6px; height: 6px; border-radius: 50%; background: var(--sub-dot); }
   .legend-dot-bday { width: 6px; height: 6px; border-radius: 50%; background: var(--bday-dot); }
+  .legend-pto { width: 12px; height: 3px; background: var(--pto); border-radius: 1px; }
   .legend-today { width: 12px; height: 12px; border: 1.5px solid var(--ink); border-radius: 3px; }
 
   .footer-hint { text-align: center; margin-top: 12px; font-size: 11px; color: var(--ink-soft); font-style: italic; }
@@ -565,6 +582,7 @@
   }
 
   .event-item.subscribed { border-left: 3px solid var(--sub-dot); cursor: default; }
+  .event-item.pto { border-left: 3px solid var(--pto); background: var(--pto-soft); }
   .event-item:not(.subscribed):active { transform: scale(0.99); }
 
   .event-time {
@@ -591,6 +609,7 @@
     font-size: 12px;
   }
   .event-item-compact.subscribed { border-left: 2px solid var(--sub-dot); cursor: default; }
+  .event-item-compact.pto { border-left: 2px solid var(--pto); background: var(--pto-soft); }
   .event-item-compact .ec-time {
     font-size: 9px;
     font-family: 'SF Mono', 'Menlo', monospace;
@@ -736,6 +755,33 @@
   }
 
   .time-row { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; }
+
+  .pto-span-btn {
+    padding: 12px 6px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    color: var(--ink);
+    font-family: 'SF Mono', 'Menlo', monospace;
+    font-size: 12px;
+    letter-spacing: 0.06em;
+    cursor: pointer;
+    text-align: center;
+    line-height: 1.3;
+  }
+  .pto-span-btn .pto-span-time {
+    display: block;
+    font-size: 10px;
+    color: var(--ink-soft);
+    margin-top: 2px;
+    letter-spacing: 0;
+  }
+  .pto-span-btn.active {
+    background: var(--pto);
+    color: var(--bg);
+    border-color: var(--pto);
+  }
+  .pto-span-btn.active .pto-span-time { color: var(--pto-soft); }
 
   .form-help {
     font-size: 11px; color: var(--ink-soft);
@@ -926,6 +972,7 @@
         <div class="legend-item"><div class="legend-dot-event"></div>My event</div>
         <div class="legend-item"><div class="legend-dot-sub"></div>Subscribed</div>
         <div class="legend-item"><div class="legend-dot-bday"></div>Birthday</div>
+        <div class="legend-item"><div class="legend-pto"></div>Time off</div>
         <div class="legend-item"><div class="legend-today"></div>Today</div>
       </div>
 
@@ -969,13 +1016,17 @@
         Birthdays
         <span class="menu-action-sub" id="bdays-status">Manage recurring birthdays</span>
       </button>
-      <button class="menu-action" id="settings-btn">
-        Sync settings
-        <span class="menu-action-sub" id="settings-status">Configure GitHub sync</span>
+      <button class="menu-action" id="pto-btn">
+        Time Off
+        <span class="menu-action-sub" id="pto-status">Manage time-off days</span>
       </button>
       <button class="menu-action" id="subs-btn">
         Subscribed calendars
         <span class="menu-action-sub" id="subs-status">Manage iCal subscriptions</span>
+      </button>
+      <button class="menu-action" id="settings-btn">
+        Sync settings
+        <span class="menu-action-sub" id="settings-status">Configure GitHub sync</span>
       </button>
       <button class="menu-action" id="export-btn">
         Export local backup
@@ -1098,6 +1149,49 @@
     </div>
   </div>
 
+  <!-- Time Off list modal -->
+  <div class="modal-backdrop" id="pto-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Time Off</div>
+      <div id="pto-list-container"></div>
+      <button class="btn-primary" id="add-pto-btn">+ Add Time Off</button>
+    </div>
+  </div>
+
+  <!-- Add/edit Time Off modal -->
+  <div class="modal-backdrop" id="pto-edit-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title" id="pto-edit-title">New Time Off</div>
+      <div class="form-row">
+        <label for="pto-name">Name (optional)</label>
+        <input type="text" id="pto-name" placeholder="Time Off" autocomplete="off" />
+      </div>
+      <div class="form-row">
+        <label>Date</label>
+        <div class="time-row">
+          <select id="pto-year"></select>
+          <select id="pto-month"></select>
+          <select id="pto-day"></select>
+        </div>
+      </div>
+      <div class="form-row">
+        <label>Span</label>
+        <div class="time-row">
+          <button type="button" class="pto-span-btn" data-span="AM">AM<br><span class="pto-span-time">8–12</span></button>
+          <button type="button" class="pto-span-btn" data-span="PM">PM<br><span class="pto-span-time">12–5</span></button>
+          <button type="button" class="pto-span-btn" data-span="FULL">Full<br><span class="pto-span-time">8–5</span></button>
+        </div>
+      </div>
+      <button class="btn-primary" id="save-pto-btn">Save</button>
+      <button class="menu-action danger" id="delete-pto-btn" style="display:none; margin-top: 12px;">
+        Delete time off
+      </button>
+      <button class="btn-secondary" id="cancel-pto-btn">Cancel</button>
+    </div>
+  </div>
+
   <!-- Event editor modal -->
   <div class="modal-backdrop" id="event-backdrop">
     <div class="modal">
@@ -1147,7 +1241,7 @@
   const HOUR_HEIGHT = 40;     // px
 
   // === State ===
-  let familyData = { days: {}, events: {}, birthdays: {} };
+  let familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
   let viewDate = new Date();  // anchor date — meaning depends on currentView
   viewDate.setHours(0, 0, 0, 0);
   let currentView = 'month';  // 'day' | 'week' | 'month' | 'year'
@@ -1170,21 +1264,21 @@
 
   // === Migration ===
   function migrateIfNeeded(raw) {
-    if (!raw || typeof raw !== 'object') return { days: {}, events: {}, birthdays: {} };
-    if (raw.days || raw.events || raw.birthdays) {
-      return { days: raw.days || {}, events: raw.events || {}, birthdays: raw.birthdays || {} };
+    if (!raw || typeof raw !== 'object') return { days: {}, events: {}, birthdays: {}, pto: {} };
+    if (raw.days || raw.events || raw.birthdays || raw.pto) {
+      return { days: raw.days || {}, events: raw.events || {}, birthdays: raw.birthdays || {}, pto: raw.pto || {} };
     }
     const days = {};
     for (const k in raw) if (raw[k] === true) days[k] = true;
-    return { days, events: {}, birthdays: {} };
+    return { days, events: {}, birthdays: {}, pto: {} };
   }
 
   // === Storage ===
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      familyData = raw ? migrateIfNeeded(JSON.parse(raw)) : { days: {}, events: {}, birthdays: {} };
-    } catch (e) { familyData = { days: {}, events: {}, birthdays: {} }; }
+      familyData = raw ? migrateIfNeeded(JSON.parse(raw)) : { days: {}, events: {}, birthdays: {}, pto: {} };
+    } catch (e) { familyData = { days: {}, events: {}, birthdays: {}, pto: {} }; }
 
     if (Object.keys(familyData.days).length === 0) {
       try {
@@ -1250,6 +1344,7 @@
     return `${h} ${h24 < 12 ? 'AM' : 'PM'}`;
   }
   function timeToMinutes(event) {
+    if (event._sortMin != null) return event._sortMin;
     if (event.hour == null || event.hour === '') return 9999;
     let h = parseInt(event.hour, 10);
     const m = parseInt(event.minute || '0', 10);
@@ -1400,6 +1495,33 @@
     if (!silent) showToast('Subscriptions refreshed');
   }
 
+  // === PTO helpers ===
+  // Span → display time string and start-minute (for sort ordering)
+  const PTO_SPAN_LABEL = { AM: '8 AM – 12 PM', PM: '12 PM – 5 PM', FULL: '8 AM – 5 PM' };
+  const PTO_SPAN_START_MIN = { AM: 8 * 60, PM: 12 * 60, FULL: 8 * 60 };
+  // For week timeline placement (24h start/end)
+  const PTO_SPAN_RANGE = {
+    AM:   { startMin: 8 * 60,  endMin: 12 * 60 },
+    PM:   { startMin: 12 * 60, endMin: 17 * 60 },
+    FULL: { startMin: 8 * 60,  endMin: 17 * 60 }
+  };
+
+  function getPtoForDay(key) {
+    const pto = (familyData.pto || {})[key];
+    if (!pto) return null;
+    return {
+      id: `pto-${key}`,
+      title: pto.name || 'Time Off',
+      pto: true,
+      ptoSpan: pto.span,
+      ptoKey: key,
+      allDay: false,
+      // synthesize fields so existing sorters/formatters don't choke
+      hour: null, minute: null, period: null,
+      _sortMin: PTO_SPAN_START_MIN[pto.span] ?? 9999
+    };
+  }
+
   function getBirthdaysForDay(key) {
     // key is YYYY-MM-DD; birthdays are keyed MM-DD
     // Values can be a string (single name) or array of strings (multiple names)
@@ -1432,7 +1554,9 @@
       for (const e of dayEvents) subs.push(e);
     }
     const bdays = getBirthdaysForDay(key);
-    return { own, subs, bdays, all: [...bdays, ...own, ...subs] };
+    const pto = getPtoForDay(key);
+    const ptoArr = pto ? [pto] : [];
+    return { own, subs, bdays, pto, all: [...bdays, ...ptoArr, ...own, ...subs] };
   }
 
   function getEventCountForDay(key) {
@@ -1440,7 +1564,8 @@
     let subs = 0;
     for (const subId in subCache) subs += (subCache[subId][key] || []).length;
     const bdays = getBirthdaysForDay(key).length;
-    return { own, subs, bdays, total: own + subs + bdays };
+    const pto = getPtoForDay(key) ? 1 : 0;
+    return { own, subs, bdays, pto, total: own + subs + bdays + pto };
   }
 
   // === GitHub sync ===
@@ -1451,13 +1576,13 @@
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
     });
-    if (res.status === 404) return { data: { days: {}, events: {}, birthdays: {} }, sha: null };
+    if (res.status === 404) return { data: { days: {}, events: {}, birthdays: {}, pto: {} }, sha: null };
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`GitHub fetch failed (${res.status}): ${text.slice(0, 100)}`);
     }
     const json = await res.json();
-    let data = { days: {}, events: {}, birthdays: {} };
+    let data = { days: {}, events: {}, birthdays: {}, pto: {} };
     try { data = migrateIfNeeded(JSON.parse(b64decode(json.content))); } catch (e) {}
     return { data, sha: json.sha };
   }
@@ -1486,7 +1611,8 @@
     return {
       days: { ...local.days, ...remote.days },
       events: { ...local.events, ...remote.events },
-      birthdays: { ...local.birthdays, ...remote.birthdays }
+      birthdays: { ...local.birthdays, ...remote.birthdays },
+      pto: { ...(local.pto || {}), ...(remote.pto || {}) }
     };
   }
   async function pullFromGitHub() {
@@ -1690,6 +1816,15 @@
         dayEl.appendChild(dotsContainer);
       }
 
+      // PTO bar — bottom edge of cell
+      const ptoEntry = (familyData.pto || {})[key];
+      if (ptoEntry && ptoEntry.span) {
+        const bar = document.createElement('div');
+        const spanClass = ptoEntry.span === 'AM' ? 'am' : ptoEntry.span === 'PM' ? 'pm' : 'full';
+        bar.className = `pto-bar ${spanClass}`;
+        dayEl.appendChild(bar);
+      }
+
       attachMonthDayHandlers(dayEl, key);
       daysContainer.appendChild(dayEl);
     }
@@ -1881,6 +2016,35 @@
       const { all } = getEventsForDay(key);
       const timed = all.filter(e => !e.allDay && e.hour != null && e.hour !== '');
 
+      // PTO block — render before timed events so events layer on top
+      const ptoEntry = (familyData.pto || {})[key];
+      if (ptoEntry && ptoEntry.span && PTO_SPAN_RANGE[ptoEntry.span]) {
+        const range = PTO_SPAN_RANGE[ptoEntry.span];
+        const visStart = Math.max(range.startMin, WEEK_HOUR_START * 60);
+        const visEnd   = Math.min(range.endMin,   WEEK_HOUR_END * 60);
+        if (visEnd > visStart) {
+          const top    = ((visStart - WEEK_HOUR_START * 60) / 60) * HOUR_HEIGHT;
+          const height = ((visEnd - visStart) / 60) * HOUR_HEIGHT;
+          const ptoEl = document.createElement('div');
+          ptoEl.className = 'timed-event pto';
+          ptoEl.style.top = top + 'px';
+          ptoEl.style.height = (height - 2) + 'px';
+          ptoEl.style.left = `calc(36px + (100% - 36px) * ${i} / 7 + 2px)`;
+          ptoEl.style.width = `calc((100% - 36px) / 7 - 4px)`;
+          ptoEl.style.right = 'auto';
+          ptoEl.style.zIndex = '1';
+          const ptoTime = document.createElement('div');
+          ptoTime.className = 'te-time';
+          ptoTime.textContent = PTO_SPAN_LABEL[ptoEntry.span];
+          ptoEl.appendChild(ptoTime);
+          const ptoTitle = document.createElement('div');
+          ptoTitle.textContent = ptoEntry.name || 'Time Off';
+          ptoEl.appendChild(ptoTitle);
+          ptoEl.addEventListener('click', () => openPtoEdit(key));
+          gridInner.appendChild(ptoEl);
+        }
+      }
+
       for (const ev of timed) {
         const mins = timeToMinutes(ev);
         if (mins < WEEK_HOUR_START * 60 || mins >= WEEK_HOUR_END * 60) continue;
@@ -2026,16 +2190,23 @@
   function renderEventItem(event, dateK) {
     const item = document.createElement('div');
     item.className = 'event-item';
-    if (event.subscribed || event.birthday) {
+    if (event.pto) {
+      item.classList.add('pto');
+      item.addEventListener('click', () => openPtoEdit(event.ptoKey || dateK));
+    } else if (event.subscribed || event.birthday) {
       item.classList.add('subscribed');
     } else {
       item.addEventListener('click', () => openEventModal(dateK, event.id));
     }
     const time = document.createElement('div');
     time.className = 'event-time';
-    const t = formatTime(event);
-    if (t) time.textContent = t;
-    else time.classList.add('notime');
+    if (event.pto) {
+      time.textContent = PTO_SPAN_LABEL[event.ptoSpan] || '';
+    } else {
+      const t = formatTime(event);
+      if (t) time.textContent = t;
+      else time.classList.add('notime');
+    }
     item.appendChild(time);
 
     const titleWrap = document.createElement('div');
@@ -2119,15 +2290,28 @@
   function renderEventItemCompact(event, dateK) {
     const item = document.createElement('div');
     item.className = 'event-item-compact';
-    if (event.subscribed || event.birthday) item.classList.add('subscribed');
-    else item.addEventListener('click', () => openEventModal(dateK, event.id));
+    if (event.pto) {
+      item.classList.add('pto');
+      item.addEventListener('click', () => openPtoEdit(event.ptoKey || dateK));
+    } else if (event.subscribed || event.birthday) {
+      item.classList.add('subscribed');
+    } else {
+      item.addEventListener('click', () => openEventModal(dateK, event.id));
+    }
 
-    const t = formatTime(event);
-    if (t) {
+    if (event.pto) {
       const timeDiv = document.createElement('div');
       timeDiv.className = 'ec-time';
-      timeDiv.textContent = t;
+      timeDiv.textContent = PTO_SPAN_LABEL[event.ptoSpan] || '';
       item.appendChild(timeDiv);
+    } else {
+      const t = formatTime(event);
+      if (t) {
+        const timeDiv = document.createElement('div');
+        timeDiv.className = 'ec-time';
+        timeDiv.textContent = t;
+        item.appendChild(timeDiv);
+      }
     }
     const titleDiv = document.createElement('div');
     titleDiv.textContent = event.title;
@@ -2456,6 +2640,204 @@
     showToast('Birthday deleted');
   }
 
+  // === Time Off (PTO) UI ===
+  let editingPtoKey = null;     // YYYY-MM-DD of the entry being edited (null if new)
+  let ptoFormSpan = 'FULL';     // currently-selected span button in the edit modal
+
+  function updatePtoStatusInMenu() {
+    const el = document.getElementById('pto-status');
+    const count = Object.keys(familyData.pto || {}).length;
+    if (count === 0) el.textContent = 'Manage time-off days';
+    else el.textContent = `${count} day${count === 1 ? '' : 's'} planned`;
+  }
+
+  function populatePtoSelectors() {
+    const yearSel = document.getElementById('pto-year');
+    yearSel.innerHTML = '';
+    const thisYear = new Date().getFullYear();
+    // Allow 2 years back, 3 forward
+    for (let y = thisYear - 2; y <= thisYear + 3; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+    const monthSel = document.getElementById('pto-month');
+    monthSel.innerHTML = '';
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = String(m).padStart(2, '0');
+      opt.textContent = MONTHS_SHORT[m - 1];
+      monthSel.appendChild(opt);
+    }
+    refreshPtoDayOptions();
+    monthSel.addEventListener('change', refreshPtoDayOptions);
+    yearSel.addEventListener('change', refreshPtoDayOptions);
+  }
+
+  function refreshPtoDayOptions() {
+    const yearSel = document.getElementById('pto-year');
+    const monthSel = document.getElementById('pto-month');
+    const daySel = document.getElementById('pto-day');
+    const year = parseInt(yearSel.value, 10) || new Date().getFullYear();
+    const month = parseInt(monthSel.value, 10) || 1;
+    const daysInMonth = new Date(year, month, 0).getDate();
+    const prev = daySel.value;
+    daySel.innerHTML = '';
+    for (let d = 1; d <= daysInMonth; d++) {
+      const opt = document.createElement('option');
+      opt.value = String(d).padStart(2, '0');
+      opt.textContent = d;
+      daySel.appendChild(opt);
+    }
+    if (prev && parseInt(prev, 10) <= daysInMonth) daySel.value = prev;
+  }
+
+  function setPtoSpanButtons(span) {
+    ptoFormSpan = span;
+    document.querySelectorAll('.pto-span-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.dataset.span === span);
+    });
+  }
+
+  function renderPtoList() {
+    const container = document.getElementById('pto-list-container');
+    container.innerHTML = '';
+    const pto = familyData.pto || {};
+    const keys = Object.keys(pto).sort();
+    if (keys.length === 0) {
+      const empty = document.createElement('div');
+      empty.className = 'events-empty';
+      empty.textContent = 'No time off planned';
+      container.appendChild(empty);
+      return;
+    }
+    for (const key of keys) {
+      const entry = pto[key];
+      if (!entry) continue;
+      const item = document.createElement('div');
+      item.className = 'sub-list-item';
+      const info = document.createElement('div');
+      info.style.flex = '1';
+      const name = document.createElement('div');
+      name.className = 'name';
+      name.textContent = entry.name || 'Time Off';
+      info.appendChild(name);
+      const meta = document.createElement('div');
+      meta.className = 'meta';
+      const date = parseDateKey(key);
+      const dateStr = `${DAY_SHORT[date.getDay()]} · ${MONTHS_SHORT[date.getMonth()]} ${date.getDate()}, ${date.getFullYear()}`;
+      meta.textContent = `${dateStr} — ${PTO_SPAN_LABEL[entry.span] || entry.span}`;
+      info.appendChild(meta);
+      item.appendChild(info);
+      const editBtn = document.createElement('button');
+      editBtn.className = 'icon-btn';
+      editBtn.textContent = 'Edit';
+      editBtn.addEventListener('click', () => openPtoEdit(key));
+      item.appendChild(editBtn);
+      container.appendChild(item);
+    }
+  }
+
+  function openPtoList() {
+    document.getElementById('modal-backdrop').classList.remove('show');
+    renderPtoList();
+    document.getElementById('pto-backdrop').classList.add('show');
+  }
+
+  // openPtoEdit(key) — if key is null, opens a new entry pre-filled with
+  // selectedDateKey if available, else today. If key matches an existing entry,
+  // opens it in edit mode.
+  function openPtoEdit(key) {
+    const titleEl = document.getElementById('pto-edit-title');
+    const nameInput = document.getElementById('pto-name');
+    const yearSel = document.getElementById('pto-year');
+    const monthSel = document.getElementById('pto-month');
+    const daySel = document.getElementById('pto-day');
+    const deleteBtn = document.getElementById('delete-pto-btn');
+
+    const existing = key ? (familyData.pto || {})[key] : null;
+    if (existing) {
+      editingPtoKey = key;
+      titleEl.textContent = 'Edit Time Off';
+      nameInput.value = existing.name || '';
+      const [y, m, d] = key.split('-');
+      yearSel.value = y;
+      monthSel.value = m;
+      refreshPtoDayOptions();
+      daySel.value = d;
+      setPtoSpanButtons(existing.span || 'FULL');
+      deleteBtn.style.display = 'block';
+    } else {
+      editingPtoKey = null;
+      titleEl.textContent = 'New Time Off';
+      nameInput.value = '';
+      // Pre-fill date: explicit key arg > selectedDateKey > today
+      let prefillKey = key || selectedDateKey || dateToKey(new Date());
+      const [y, m, d] = prefillKey.split('-');
+      yearSel.value = y;
+      monthSel.value = m;
+      refreshPtoDayOptions();
+      daySel.value = d;
+      setPtoSpanButtons('FULL');
+      deleteBtn.style.display = 'none';
+    }
+
+    document.getElementById('pto-backdrop').classList.remove('show');
+    document.getElementById('pto-edit-backdrop').classList.add('show');
+  }
+
+  function closePtoEdit() {
+    document.getElementById('pto-edit-backdrop').classList.remove('show');
+    editingPtoKey = null;
+  }
+
+  function savePto() {
+    const name = document.getElementById('pto-name').value.trim();
+    const year = document.getElementById('pto-year').value;
+    const month = document.getElementById('pto-month').value;
+    const day = document.getElementById('pto-day').value;
+    const span = ptoFormSpan;
+    if (!span || !PTO_SPAN_LABEL[span]) { showToast('Pick AM, PM, or Full'); return; }
+    const newKey = `${year}-${month}-${day}`;
+
+    const wasEditing = !!editingPtoKey;
+
+    if (!familyData.pto) familyData.pto = {};
+
+    // If editing and the date changed, drop the old slot
+    if (editingPtoKey && editingPtoKey !== newKey) {
+      delete familyData.pto[editingPtoKey];
+    }
+
+    familyData.pto[newKey] = { name: name || '', span };
+
+    saveLocal();
+    closePtoEdit();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    updatePtoStatusInMenu();
+    document.getElementById('pto-backdrop').classList.add('show');
+    renderPtoList();
+    showToast(wasEditing ? 'Time off updated' : 'Time off added');
+  }
+
+  function deletePto() {
+    if (!editingPtoKey) return;
+    if (!confirm('Delete this time off?')) return;
+    delete familyData.pto[editingPtoKey];
+    saveLocal();
+    closePtoEdit();
+    renderCalendar();
+    renderEvents();
+    schedulePush();
+    updatePtoStatusInMenu();
+    document.getElementById('pto-backdrop').classList.add('show');
+    renderPtoList();
+    showToast('Time off deleted');
+  }
+
   // === Subscriptions UI ===
   function updateSubsStatusInMenu() {
     const el = document.getElementById('subs-status');
@@ -2669,6 +3051,7 @@
     updateSettingsStatusInMenu();
     updateSubsStatusInMenu();
     updateBdaysStatusInMenu();
+    updatePtoStatusInMenu();
     modalBackdrop.classList.add('show');
   });
   modalBackdrop.addEventListener('click', (e) => {
@@ -2770,6 +3153,27 @@
   document.getElementById('bday-edit-backdrop').addEventListener('click', (e) => {
     if (e.target === document.getElementById('bday-edit-backdrop')) closeBdayEdit();
   });
+
+  // Time Off wiring
+  document.getElementById('pto-btn').addEventListener('click', openPtoList);
+  document.getElementById('pto-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pto-backdrop')) {
+      document.getElementById('pto-backdrop').classList.remove('show');
+    }
+  });
+  document.getElementById('add-pto-btn').addEventListener('click', () => openPtoEdit(null));
+  document.getElementById('save-pto-btn').addEventListener('click', savePto);
+  document.getElementById('delete-pto-btn').addEventListener('click', deletePto);
+  document.getElementById('cancel-pto-btn').addEventListener('click', () => {
+    closePtoEdit();
+    document.getElementById('pto-backdrop').classList.add('show');
+  });
+  document.getElementById('pto-edit-backdrop').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('pto-edit-backdrop')) closePtoEdit();
+  });
+  document.querySelectorAll('.pto-span-btn').forEach(btn => {
+    btn.addEventListener('click', () => setPtoSpanButtons(btn.dataset.span));
+  });
   document.getElementById('add-sub-btn').addEventListener('click', () => openSubEdit(null));
   document.getElementById('refresh-subs-btn').addEventListener('click', () => refreshAllSubscriptions(false));
   document.getElementById('cors-switch').addEventListener('click', () => {
@@ -2819,7 +3223,7 @@
   });
   document.getElementById('clear-btn').addEventListener('click', () => {
     if (confirm('Clear local data? This does not delete from GitHub.')) {
-      familyData = { days: {}, events: {}, birthdays: {} };
+      familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
       saveLocal();
       modalBackdrop.classList.remove('show');
       selectedDateKey = null;
@@ -2833,6 +3237,7 @@
   // === Boot ===
   populateTimeSelectors();
   populateBdaySelectors();
+  populatePtoSelectors();
   loadLocal();
   renderCalendar();
   renderEvents();
