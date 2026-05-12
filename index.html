@@ -902,6 +902,64 @@
 
   .toast.show { transform: translateX(-50%) translateY(0); }
 
+  .cog-btn {
+    position: fixed;
+    bottom: 20px;
+    right: 20px;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    background: var(--surface);
+    border: 1px solid var(--accent);
+    color: var(--accent);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow);
+    z-index: 50;
+    opacity: 0.85;
+    padding: 0;
+  }
+  .cog-btn svg { width: 20px; height: 20px; display: block; }
+  .cog-btn:active { transform: scale(0.95); opacity: 1; }
+
+  .confirm-input {
+    width: 100%;
+    padding: 12px 14px;
+    border: 1px solid var(--line);
+    border-radius: 10px;
+    background: var(--surface);
+    font-size: 15px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.08em;
+    color: var(--ink);
+    text-align: center;
+  }
+  .confirm-input:focus { outline: none; border-color: var(--danger); }
+
+  .btn-danger {
+    width: 100%;
+    background: var(--danger);
+    color: var(--bg);
+    border: none;
+    border-radius: 12px;
+    padding: 14px;
+    font-size: 14px;
+    font-family: 'SF Mono', 'Menlo', monospace;
+    letter-spacing: 0.1em;
+    text-transform: uppercase;
+    cursor: pointer;
+    margin-top: 8px;
+    opacity: 0.4;
+    pointer-events: none;
+  }
+  .btn-danger.armed {
+    opacity: 1;
+    pointer-events: auto;
+  }
+  .btn-danger.armed:active { transform: scale(0.98); }
+
   .spinner {
     display: inline-block;
     width: 10px; height: 10px;
@@ -1027,18 +1085,6 @@
       <button class="menu-action" id="settings-btn">
         Sync settings
         <span class="menu-action-sub" id="settings-status">Configure GitHub sync</span>
-      </button>
-      <button class="menu-action" id="export-btn">
-        Export local backup
-        <span class="menu-action-sub">Download data as a file</span>
-      </button>
-      <button class="menu-action" id="import-btn">
-        Import local backup
-        <span class="menu-action-sub">Restore from a previously exported file</span>
-      </button>
-      <button class="menu-action danger" id="clear-btn">
-        Clear all data
-        <span class="menu-action-sub">Wipe local data (does not delete from GitHub)</span>
       </button>
       <input type="file" id="file-input" class="file-input" accept=".json,application/json" />
     </div>
@@ -1221,6 +1267,60 @@
   </div>
 
   <div class="toast" id="toast"></div>
+
+  <!-- Floating cog button for data ops -->
+  <button class="cog-btn" id="cog-btn" aria-label="Data tools">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.75" stroke-linecap="round" stroke-linejoin="round">
+      <circle cx="12" cy="12" r="3"></circle>
+      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path>
+    </svg>
+  </button>
+
+  <!-- Cog menu modal -->
+  <div class="modal-backdrop" id="cog-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Data Tools</div>
+      <button class="menu-action" id="export-btn">
+        Export local backup
+        <span class="menu-action-sub">Download data as a file</span>
+      </button>
+      <button class="menu-action" id="import-btn">
+        Import local backup
+        <span class="menu-action-sub">Restore from a previously exported file</span>
+      </button>
+      <button class="menu-action danger" id="clear-btn">
+        Clear all data
+        <span class="menu-action-sub">Wipe local data — type-to-confirm</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Clear confirm modal -->
+  <div class="modal-backdrop" id="clear-backdrop">
+    <div class="modal">
+      <div class="modal-handle"></div>
+      <div class="modal-title">Clear All Data</div>
+      <p class="form-help" style="margin-bottom: 14px;">
+        This wipes all local data: days, events, birthdays, and time off.
+        Subscriptions and sync settings are kept.
+        If sync stays connected, the next push will overwrite your GitHub backup with empty data.
+      </p>
+      <div class="form-row">
+        <label for="clear-confirm-input">Type CLEAR to enable</label>
+        <input type="text" id="clear-confirm-input" class="confirm-input" autocomplete="off" autocapitalize="characters" autocorrect="off" placeholder="CLEAR" />
+      </div>
+      <div class="switch-row">
+        <div>
+          <div class="switch-label">Also disconnect from GitHub sync</div>
+          <div class="switch-help">Recommended — prevents auto-overwrite of remote data.</div>
+        </div>
+        <div class="switch on" id="clear-disconnect-switch"></div>
+      </div>
+      <button class="btn-danger" id="confirm-clear-btn">Clear data</button>
+      <button class="btn-secondary" id="cancel-clear-btn">Cancel</button>
+    </div>
+  </div>
 
 <script>
   const STORAGE_KEY = 'family-time-data-v2';
@@ -3192,8 +3292,17 @@
     if (e.target === document.getElementById('sub-edit-backdrop')) closeSubEdit();
   });
 
+  // === Cog (data tools) wiring ===
+  const cogBackdrop = document.getElementById('cog-backdrop');
+  document.getElementById('cog-btn').addEventListener('click', () => {
+    cogBackdrop.classList.add('show');
+  });
+  cogBackdrop.addEventListener('click', (e) => {
+    if (e.target === cogBackdrop) cogBackdrop.classList.remove('show');
+  });
+
   document.getElementById('export-btn').addEventListener('click', () => {
-    modalBackdrop.classList.remove('show');
+    cogBackdrop.classList.remove('show');
     doExport();
   });
   document.getElementById('import-btn').addEventListener('click', () => {
@@ -3208,7 +3317,7 @@
         const imported = migrateIfNeeded(JSON.parse(ev.target.result));
         familyData = mergeData(familyData, imported);
         saveLocal();
-        modalBackdrop.classList.remove('show');
+        cogBackdrop.classList.remove('show');
         renderCalendar();
         renderEvents();
         updateStats();
@@ -3221,17 +3330,61 @@
     reader.readAsText(file);
     e.target.value = '';
   });
+
+  // Type-to-confirm clear flow
+  const clearBackdrop = document.getElementById('clear-backdrop');
+  const clearInput = document.getElementById('clear-confirm-input');
+  const clearConfirmBtn = document.getElementById('confirm-clear-btn');
+  const clearDisconnectSwitch = document.getElementById('clear-disconnect-switch');
+  let clearDisconnect = true;
+
+  function resetClearModal() {
+    clearInput.value = '';
+    clearConfirmBtn.classList.remove('armed');
+    clearDisconnect = true;
+    clearDisconnectSwitch.classList.add('on');
+  }
+
   document.getElementById('clear-btn').addEventListener('click', () => {
-    if (confirm('Clear local data? This does not delete from GitHub.')) {
-      familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
-      saveLocal();
-      modalBackdrop.classList.remove('show');
-      selectedDateKey = null;
-      renderCalendar();
-      renderEvents();
-      updateStats();
-      showToast('Local data cleared');
+    cogBackdrop.classList.remove('show');
+    resetClearModal();
+    clearBackdrop.classList.add('show');
+    setTimeout(() => clearInput.focus(), 100);
+  });
+  clearBackdrop.addEventListener('click', (e) => {
+    if (e.target === clearBackdrop) {
+      clearBackdrop.classList.remove('show');
+      cogBackdrop.classList.add('show');
     }
+  });
+  clearInput.addEventListener('input', () => {
+    clearConfirmBtn.classList.toggle('armed', clearInput.value.trim().toUpperCase() === 'CLEAR');
+  });
+  clearDisconnectSwitch.addEventListener('click', () => {
+    clearDisconnect = !clearDisconnect;
+    clearDisconnectSwitch.classList.toggle('on', clearDisconnect);
+  });
+  document.getElementById('cancel-clear-btn').addEventListener('click', () => {
+    clearBackdrop.classList.remove('show');
+    cogBackdrop.classList.add('show');
+  });
+  clearConfirmBtn.addEventListener('click', () => {
+    if (!clearConfirmBtn.classList.contains('armed')) return;
+    familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
+    saveLocal();
+    selectedDateKey = null;
+    if (clearDisconnect && syncSettings) {
+      syncSettings = null;
+      syncMeta = { lastSync: null, lastError: null, sha: null };
+      localStorage.removeItem(SETTINGS_KEY);
+      localStorage.removeItem(SYNC_META_KEY);
+    }
+    clearBackdrop.classList.remove('show');
+    renderCalendar();
+    renderEvents();
+    updateStats();
+    updateSyncStatus();
+    showToast(clearDisconnect ? 'Cleared and disconnected' : 'Local data cleared');
   });
 
   // === Boot ===
