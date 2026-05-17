@@ -731,6 +731,12 @@
 
   .form-row { margin-bottom: 14px; }
 
+  .settings-divider {
+    height: 1px;
+    background: var(--line);
+    margin: 4px 0 18px 0;
+  }
+
   .form-row label {
     display: block; font-size: 10px;
     font-weight: 500; letter-spacing: 0.14em;
@@ -1112,6 +1118,22 @@
         <input type="password" id="gh-token" autocomplete="off" autocapitalize="off" autocorrect="off" />
         <p class="form-help">Stored only on this device.</p>
       </div>
+
+      <div class="settings-divider"></div>
+
+      <div class="form-row">
+        <label>Calendar begin date</label>
+        <p class="form-help" style="margin-top: 0; margin-bottom: 8px;">
+          Stats math excludes days before this date. Leave blank to use all data.
+        </p>
+        <div class="time-row">
+          <select id="cutoff-year"></select>
+          <select id="cutoff-month"></select>
+          <select id="cutoff-day"></select>
+        </div>
+        <p class="form-help" id="cutoff-warning" style="display: none; color: var(--danger); margin-top: 8px;"></p>
+      </div>
+
       <button class="btn-primary" id="save-settings-btn">Save & Test</button>
       <button class="menu-action danger" id="clear-settings-btn" style="margin-top: 12px;">
         Disconnect
@@ -1341,7 +1363,7 @@
   const HOUR_HEIGHT = 40;     // px
 
   // === State ===
-  let familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
+  let familyData = { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null };
   let viewDate = new Date();  // anchor date — meaning depends on currentView
   viewDate.setHours(0, 0, 0, 0);
   let currentView = 'month';  // 'day' | 'week' | 'month' | 'year'
@@ -1364,21 +1386,27 @@
 
   // === Migration ===
   function migrateIfNeeded(raw) {
-    if (!raw || typeof raw !== 'object') return { days: {}, events: {}, birthdays: {}, pto: {} };
+    if (!raw || typeof raw !== 'object') return { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null };
     if (raw.days || raw.events || raw.birthdays || raw.pto) {
-      return { days: raw.days || {}, events: raw.events || {}, birthdays: raw.birthdays || {}, pto: raw.pto || {} };
+      return {
+        days: raw.days || {},
+        events: raw.events || {},
+        birthdays: raw.birthdays || {},
+        pto: raw.pto || {},
+        cutoff: typeof raw.cutoff === 'string' ? raw.cutoff : null
+      };
     }
     const days = {};
     for (const k in raw) if (raw[k] === true) days[k] = true;
-    return { days, events: {}, birthdays: {}, pto: {} };
+    return { days, events: {}, birthdays: {}, pto: {}, cutoff: null };
   }
 
   // === Storage ===
   function loadLocal() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      familyData = raw ? migrateIfNeeded(JSON.parse(raw)) : { days: {}, events: {}, birthdays: {}, pto: {} };
-    } catch (e) { familyData = { days: {}, events: {}, birthdays: {}, pto: {} }; }
+      familyData = raw ? migrateIfNeeded(JSON.parse(raw)) : { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null };
+    } catch (e) { familyData = { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null }; }
 
     if (Object.keys(familyData.days).length === 0) {
       try {
@@ -1676,13 +1704,13 @@
     const res = await fetch(url, {
       headers: { 'Authorization': `Bearer ${token}`, 'Accept': 'application/vnd.github+json', 'X-GitHub-Api-Version': '2022-11-28' }
     });
-    if (res.status === 404) return { data: { days: {}, events: {}, birthdays: {}, pto: {} }, sha: null };
+    if (res.status === 404) return { data: { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null }, sha: null };
     if (!res.ok) {
       const text = await res.text();
       throw new Error(`GitHub fetch failed (${res.status}): ${text.slice(0, 100)}`);
     }
     const json = await res.json();
-    let data = { days: {}, events: {}, birthdays: {}, pto: {} };
+    let data = { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null };
     try { data = migrateIfNeeded(JSON.parse(b64decode(json.content))); } catch (e) {}
     return { data, sha: json.sha };
   }
@@ -1712,7 +1740,8 @@
       days: { ...local.days, ...remote.days },
       events: { ...local.events, ...remote.events },
       birthdays: { ...local.birthdays, ...remote.birthdays },
-      pto: { ...(local.pto || {}), ...(remote.pto || {}) }
+      pto: { ...(local.pto || {}), ...(remote.pto || {}) },
+      cutoff: remote.cutoff !== undefined ? remote.cutoff : (local.cutoff || null)
     };
   }
   async function pullFromGitHub() {
@@ -1729,6 +1758,7 @@
       saveSyncMeta();
       renderCalendar();
       renderEvents();
+      updateStats();
     } catch (err) {
       syncMeta.lastError = err.message;
       saveSyncMeta();
@@ -2181,53 +2211,93 @@
   }
 
   // === Stats compact ===
+  // Returns true if a date key falls before the configured calendar begin date.
+  // Used by stats math to exclude pre-cutoff days from both numerator and denominator.
+  function isBeforeCutoff(key) {
+    const c = familyData.cutoff;
+    if (!c) return false;
+    return key < c;
+  }
+
   function updateStats() {
     const today = new Date();
     const thisYear = today.getFullYear();
     const todayKey = dateToKey(today);
+    const cutoff = familyData.cutoff || null;
 
     // Month stat follows viewDate (full month, planned + actual)
     const viewYear = viewDate.getFullYear();
     const viewMonth = viewDate.getMonth();
     const monthPrefix = `${viewYear}-${String(viewMonth + 1).padStart(2, '0')}-`;
-    let monthCount = 0;
-    for (const key in familyData.days) {
-      if (familyData.days[key] && key.startsWith(monthPrefix)) monthCount++;
-    }
     const daysInViewMonth = new Date(viewYear, viewMonth + 1, 0).getDate();
-    const monthPct = Math.round((monthCount / daysInViewMonth) * 100);
+    const monthFirstKey = `${monthPrefix}01`;
+    const monthLastKey = `${monthPrefix}${String(daysInViewMonth).padStart(2, '0')}`;
+
+    let monthCount = 0;
+    let monthDenom = daysInViewMonth;
+    if (cutoff && cutoff > monthLastKey) {
+      // Entire month is before cutoff
+      monthDenom = 0;
+    } else if (cutoff && cutoff > monthFirstKey) {
+      // Cutoff lands inside this month — denom is days from cutoff to end of month
+      const cutoffDay = parseInt(cutoff.split('-')[2], 10);
+      monthDenom = daysInViewMonth - cutoffDay + 1;
+    }
+    for (const key in familyData.days) {
+      if (!familyData.days[key]) continue;
+      if (!key.startsWith(monthPrefix)) continue;
+      if (isBeforeCutoff(key)) continue;
+      monthCount++;
+    }
+    const monthPct = monthDenom > 0 ? Math.round((monthCount / monthDenom) * 100) : 0;
 
     // Year stat follows viewDate
     const yearPrefix = `${viewYear}-`;
+    const yearStartKey = `${viewYear}-01-01`;
+    const yearEndKey = `${viewYear}-12-31`;
     let yearCount = 0;
-    if (viewYear === thisYear) {
-      // Current year: only count days <= today
-      for (const key in familyData.days) {
-        if (familyData.days[key] && key.startsWith(yearPrefix) && key <= todayKey) yearCount++;
-      }
-    } else {
-      // Past or future year: count all marked days in that year
-      for (const key in familyData.days) {
-        if (familyData.days[key] && key.startsWith(yearPrefix)) yearCount++;
-      }
+    for (const key in familyData.days) {
+      if (!familyData.days[key]) continue;
+      if (!key.startsWith(yearPrefix)) continue;
+      if (isBeforeCutoff(key)) continue;
+      if (viewYear === thisYear && key > todayKey) continue;
+      yearCount++;
     }
 
     const isLeapYear = ((viewYear % 4 === 0 && viewYear % 100 !== 0) || viewYear % 400 === 0);
     const fullYearLength = isLeapYear ? 366 : 365;
 
-    let yearDenom;
+    // Denominator: bounded by cutoff (if it lands inside this year) and by today (if current year)
+    let yearDenomStart = yearStartKey;
+    if (cutoff && cutoff > yearStartKey && cutoff <= yearEndKey) {
+      yearDenomStart = cutoff;
+    }
+    let yearDenomEnd = yearEndKey;
     if (viewYear === thisYear) {
-      // Days elapsed in current year
-      const startOfYear = new Date(thisYear, 0, 1);
-      yearDenom = Math.floor((today - startOfYear) / (1000 * 60 * 60 * 24)) + 1;
+      yearDenomEnd = todayKey;
+    }
+
+    let yearDenom;
+    if (cutoff && cutoff > yearEndKey) {
+      // Entire year is before cutoff
+      yearDenom = 0;
+    } else if (yearDenomStart > yearDenomEnd) {
+      // Edge: viewing current year but cutoff is after today
+      yearDenom = 0;
     } else {
-      yearDenom = fullYearLength;
+      // Inclusive day count between two YYYY-MM-DD keys
+      const a = new Date(yearDenomStart + 'T00:00:00');
+      const b = new Date(yearDenomEnd + 'T00:00:00');
+      yearDenom = Math.round((b - a) / (1000 * 60 * 60 * 24)) + 1;
+      if (!isLeapYear && yearDenomStart === yearStartKey && yearDenomEnd === yearEndKey) {
+        yearDenom = fullYearLength; // safety
+      }
     }
     const yearPct = yearDenom > 0 ? Math.round((yearCount / yearDenom) * 100) : 0;
 
     const el = document.getElementById('stats-compact');
     el.innerHTML = `
-      <span class="stat-piece">${MONTHS_SHORT[viewMonth]} ${viewYear}: <span class="stat-num">${monthCount}</span>/${daysInViewMonth} - <span class="stat-pct">${monthPct}%</span></span>
+      <span class="stat-piece">${MONTHS_SHORT[viewMonth]} ${viewYear}: <span class="stat-num">${monthCount}</span>/${monthDenom} - <span class="stat-pct">${monthPct}%</span></span>
       <span class="stat-piece">${viewYear}: <span class="stat-num">${yearCount}</span>/${yearDenom} - <span class="stat-pct">${yearPct}%</span></span>
     `;
   }
@@ -3164,6 +3234,104 @@
     else el.textContent = 'Configure GitHub sync';
   }
 
+  // === Cutoff (Calendar Begin Date) selectors ===
+  function populateCutoffSelectors() {
+    const yearSel = document.getElementById('cutoff-year');
+    const monthSel = document.getElementById('cutoff-month');
+    const daySel = document.getElementById('cutoff-day');
+    // Year: 2020 through current year
+    yearSel.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '—';
+    yearSel.appendChild(blank);
+    const thisYear = new Date().getFullYear();
+    for (let y = 2020; y <= thisYear; y++) {
+      const opt = document.createElement('option');
+      opt.value = String(y);
+      opt.textContent = y;
+      yearSel.appendChild(opt);
+    }
+    monthSel.innerHTML = '';
+    const blankM = document.createElement('option');
+    blankM.value = '';
+    blankM.textContent = '—';
+    monthSel.appendChild(blankM);
+    for (let m = 1; m <= 12; m++) {
+      const opt = document.createElement('option');
+      opt.value = String(m).padStart(2, '0');
+      opt.textContent = MONTHS_SHORT[m - 1];
+      monthSel.appendChild(opt);
+    }
+    refreshCutoffDayOptions();
+    yearSel.addEventListener('change', refreshCutoffDayOptions);
+    monthSel.addEventListener('change', refreshCutoffDayOptions);
+  }
+
+  function refreshCutoffDayOptions() {
+    const yearSel = document.getElementById('cutoff-year');
+    const monthSel = document.getElementById('cutoff-month');
+    const daySel = document.getElementById('cutoff-day');
+    const prev = daySel.value;
+    daySel.innerHTML = '';
+    const blank = document.createElement('option');
+    blank.value = '';
+    blank.textContent = '—';
+    daySel.appendChild(blank);
+    const y = parseInt(yearSel.value, 10);
+    const m = parseInt(monthSel.value, 10);
+    const days = (y && m) ? new Date(y, m, 0).getDate() : 31;
+    for (let d = 1; d <= days; d++) {
+      const opt = document.createElement('option');
+      opt.value = String(d).padStart(2, '0');
+      opt.textContent = d;
+      daySel.appendChild(opt);
+    }
+    if (prev && parseInt(prev, 10) <= days) daySel.value = prev;
+  }
+
+  function loadCutoffIntoSelectors() {
+    const yearSel = document.getElementById('cutoff-year');
+    const monthSel = document.getElementById('cutoff-month');
+    const daySel = document.getElementById('cutoff-day');
+    document.getElementById('cutoff-warning').style.display = 'none';
+    if (familyData.cutoff && /^\d{4}-\d{2}-\d{2}$/.test(familyData.cutoff)) {
+      const [y, m, d] = familyData.cutoff.split('-');
+      yearSel.value = y;
+      monthSel.value = m;
+      refreshCutoffDayOptions();
+      daySel.value = d;
+    } else {
+      yearSel.value = '';
+      monthSel.value = '';
+      refreshCutoffDayOptions();
+      daySel.value = '';
+    }
+  }
+
+  // Returns { value, valid, warn } based on the three selectors.
+  // value: null if any selector blank, otherwise "YYYY-MM-DD"
+  // valid: false if exactly one or two selectors are filled (ambiguous)
+  // warn: a string if the date is in the future, else null
+  function readCutoffFromSelectors() {
+    const y = document.getElementById('cutoff-year').value;
+    const m = document.getElementById('cutoff-month').value;
+    const d = document.getElementById('cutoff-day').value;
+    const allBlank = !y && !m && !d;
+    const allFilled = y && m && d;
+    if (allBlank) return { value: null, valid: true, warn: null };
+    if (!allFilled) return { value: null, valid: false, warn: null };
+    const value = `${y}-${m}-${d}`;
+    // Validate real date (no Feb 30, etc.)
+    const dt = new Date(value + 'T00:00:00');
+    if (isNaN(dt.getTime()) || dateToKey(dt) !== value) {
+      return { value: null, valid: false, warn: null };
+    }
+    const todayKey = dateToKey(new Date());
+    const warn = value > todayKey ? 'Heads up — that date is in the future.' : null;
+    return { value, valid: true, warn };
+  }
+
   const settingsBackdrop = document.getElementById('settings-backdrop');
   function openSettings() {
     if (syncSettings) {
@@ -3177,6 +3345,7 @@
       document.getElementById('gh-file').value = '';
       document.getElementById('gh-token').value = '';
     }
+    loadCutoffIntoSelectors();
     modalBackdrop.classList.remove('show');
     settingsBackdrop.classList.add('show');
   }
@@ -3185,11 +3354,50 @@
     if (e.target === settingsBackdrop) settingsBackdrop.classList.remove('show');
   });
   document.getElementById('save-settings-btn').addEventListener('click', async () => {
+    // 1) Validate & persist cutoff (independent of GitHub fields)
+    const cutoffWarnEl = document.getElementById('cutoff-warning');
+    cutoffWarnEl.style.display = 'none';
+    const cut = readCutoffFromSelectors();
+    if (!cut.valid) {
+      cutoffWarnEl.textContent = 'Calendar begin date: fill all three fields or leave all blank.';
+      cutoffWarnEl.style.display = 'block';
+      return;
+    }
+    const prevCutoff = familyData.cutoff || null;
+    const cutoffChanged = (cut.value || null) !== prevCutoff;
+    if (cutoffChanged) {
+      familyData.cutoff = cut.value;
+      saveLocal();
+    }
+
+    // 2) Handle GitHub fields: only attempt connection if any field is filled in
     const user = document.getElementById('gh-user').value.trim();
     const repo = document.getElementById('gh-repo').value.trim();
     const file = document.getElementById('gh-file').value.trim() || 'data.json';
     const token = document.getElementById('gh-token').value.trim();
-    if (!user || !repo || !token) { showToast('All fields required'); return; }
+    const anyGhField = user || repo || token;
+
+    if (!anyGhField) {
+      // Cutoff-only save path
+      if (cutoffChanged) {
+        renderCalendar();
+        renderEvents();
+        updateStats();
+        if (syncSettings) schedulePush();
+        const msg = cut.warn ? 'Saved — ' + cut.warn : (cut.value ? 'Calendar begin date set' : 'Calendar begin date cleared');
+        showToast(msg);
+      } else {
+        showToast('Nothing to save');
+      }
+      settingsBackdrop.classList.remove('show');
+      return;
+    }
+
+    if (!user || !repo || !token) {
+      showToast('GitHub: user, repo, and token are required');
+      return;
+    }
+
     syncSettings = { user, repo, file, token };
     syncInProgress = true;
     updateSyncStatus();
@@ -3197,6 +3405,9 @@
       const { data, sha } = await githubGet();
       localStorage.setItem(SETTINGS_KEY, JSON.stringify(syncSettings));
       familyData = mergeData(familyData, data);
+      // If we just changed the cutoff locally, our local value should win over remote
+      // (mergeData has remote winning on cutoff; reapply our newer choice)
+      if (cutoffChanged) familyData.cutoff = cut.value;
       saveLocal();
       syncMeta.sha = sha;
       syncMeta.lastSync = Date.now();
@@ -3206,7 +3417,8 @@
       renderCalendar();
       renderEvents();
       updateStats();
-      showToast('Connected — sync is on');
+      const baseMsg = 'Connected — sync is on';
+      showToast(cut.warn ? baseMsg + ' (heads up: begin date is in the future)' : baseMsg);
       schedulePush();
     } catch (err) {
       syncSettings = null;
@@ -3370,7 +3582,7 @@
   });
   clearConfirmBtn.addEventListener('click', () => {
     if (!clearConfirmBtn.classList.contains('armed')) return;
-    familyData = { days: {}, events: {}, birthdays: {}, pto: {} };
+    familyData = { days: {}, events: {}, birthdays: {}, pto: {}, cutoff: null };
     saveLocal();
     selectedDateKey = null;
     if (clearDisconnect && syncSettings) {
@@ -3391,6 +3603,7 @@
   populateTimeSelectors();
   populateBdaySelectors();
   populatePtoSelectors();
+  populateCutoffSelectors();
   loadLocal();
   renderCalendar();
   renderEvents();
